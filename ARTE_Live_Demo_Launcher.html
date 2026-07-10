@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A.R.T.E. Live Demo Matrix</title>
+    <title>A.R.T.E. Live Demo Matrix (All-In-One)</title>
     <style>
         :root {
             --bg-main: #05070a;
@@ -15,12 +15,7 @@
             --warning-yellow: #ffd700;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Courier New', Courier, monospace;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
 
         body {
             background-color: var(--bg-main);
@@ -31,7 +26,6 @@
             overflow: hidden;
         }
 
-        /* --- Header --- */
         header {
             background-color: #161b22;
             border-bottom: 1px solid var(--border-color);
@@ -49,29 +43,24 @@
         }
 
         .status-badge {
-            background-color: rgba(0, 255, 204, 0.1);
-            border: 1px solid var(--accent-cyan);
-            color: var(--accent-cyan);
+            background-color: rgba(255, 0, 255, 0.1);
+            border: 1px solid var(--accent-magenta);
+            color: var(--accent-magenta);
             padding: 4px 10px;
             font-size: 0.8rem;
             border-radius: 4px;
             font-weight: bold;
         }
 
-        /* --- Main Layout --- */
-        .matrix-container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
+        .matrix-container { display: flex; flex: 1; overflow: hidden; }
 
-        /* --- Sidebar (Modul-Bibliothek) --- */
         .sidebar {
             width: 320px;
             background-color: var(--bg-panel);
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
+            z-index: 5;
         }
 
         .sidebar-title {
@@ -83,11 +72,7 @@
             background-color: #161b22;
         }
 
-        .module-list {
-            list-style: none;
-            overflow-y: auto;
-            flex: 1;
-        }
+        .module-list { list-style: none; overflow-y: auto; flex: 1; }
 
         .module-item {
             padding: 15px;
@@ -111,22 +96,10 @@
             padding-left: 11px;
         }
 
-        .module-name {
-            color: var(--text-main);
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-        
-        .module-item.active .module-name {
-            color: var(--accent-magenta);
-        }
+        .module-name { color: var(--text-main); font-weight: bold; font-size: 0.9rem; }
+        .module-item.active .module-name { color: var(--accent-magenta); }
+        .module-desc { font-size: 0.75rem; color: #8b949e; }
 
-        .module-desc {
-            font-size: 0.75rem;
-            color: #8b949e;
-        }
-
-        /* --- Viewport (Der Simulator) --- */
         .viewport-container {
             flex: 1;
             display: flex;
@@ -145,121 +118,509 @@
             justify-content: space-between;
         }
 
-        #current-url {
-            color: var(--accent-cyan);
-            font-style: italic;
-        }
+        #current-url { color: var(--accent-cyan); font-style: italic; }
 
         iframe {
             flex: 1;
             width: 100%;
             border: none;
-            background-color: #ffffff; /* Fallback für helle Module */
+            background-color: #ffffff; 
         }
-
-        /* Loading Screen */
-        .loader-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(5, 7, 10, 0.9);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-            display: none;
-        }
-
-        .loader-spinner {
-            border: 3px solid #30363d;
-            border-top: 3px solid var(--accent-magenta);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 15px;
-        }
-
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
     </style>
 </head>
 <body>
 
     <header>
         <h1>A.R.T.E. Live Demo Matrix</h1>
-        <div class="status-badge">GitHub Cloud Sync Active</div>
+        <div class="status-badge">All-In-One Offline Core Active</div>
     </header>
 
     <div class="matrix-container">
-        
-        <!-- Linke Seite: Modul Auswahl -->
         <div class="sidebar">
-            <div class="sidebar-title">Verfügbare Module</div>
-            <ul class="module-list" id="module-list">
-                <!-- Die Module werden dynamisch aus deinem GitHub Repo geladen -->
-            </ul>
+            <div class="sidebar-title">Eingebettete Module</div>
+            <ul class="module-list" id="module-list"></ul>
         </div>
-
-        <!-- Rechte Seite: Live Ausführung -->
         <div class="viewport-container">
             <div class="viewport-header">
-                <span>Ausführungsumgebung (Sandbox)</span>
-                <span id="current-url">Wähle ein Modul aus...</span>
+                <span>Native Sandbox Ausführung</span>
+                <span id="current-url">System bereit. Wähle ein Modul.</span>
             </div>
-            
-            <div class="loader-overlay" id="loader">
-                <div class="loader-spinner"></div>
-                <div style="color: #00ffcc;">Kompiliere Modul-Architektur...</div>
-            </div>
-
-            <iframe id="app-viewport" sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-popups"></iframe>
+            <iframe id="app-viewport" allow="fullscreen; autoplay; display-capture; microphone; camera" sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-popups"></iframe>
         </div>
-
     </div>
 
-    <script>
-        // === A.R.T.E. LIVE DEMO ENGINE ===
-        
-        // Die Basis-URL zu deinem Raw-GitHub Code (main branch)
-        const GITHUB_RAW_BASE = "https://raw.githubusercontent.com/Shorxi/html_ARTE_betriebsystem/main/Module/";
+    <!-- ========================================================================= -->
+    <!-- MODULE DATA REPOSITORY (ALL-IN-ONE) -->
+    <!-- ========================================================================= -->
 
-        // Definition der Module, die in der Demo verfügbar sein sollen
-        const modules = [
-            {
-                name: "Kinetic Telemetry Engine",
-                file: "Kinetic_Telemetry_&_Canvas_Engine.html",
-                desc: "GPU-beschleunigte HTML5 Canvas Datenvisualisierung."
-            },
-            {
-                name: "Optical Contour Synthesizer",
-                file: "Optical_Contour_&_Blueprint_Synthesizer.html",
-                desc: "Lokale Pixel Edge-Detection (Blueprint Creator)."
-            },
-            {
-                name: "Advanced Document Matrix",
-                file: "text_editor.html",
-                desc: "WYSIWYG A4-Simulation & Multi-Format Editor."
-            },
-            {
-                name: "Web Synthesis Matrix",
-                file: "Web_Editor.html",
-                desc: "Live HTML/CSS/JS Editor mit Real-Time Execution."
-            },
-            {
-                name: "Acoustic Resonance Engine",
-                file: "Audio_Analyser-Pipeline.html",
-                desc: "Audio-Visualisierung & Hardware Gain Control."
+    <!-- MODULE 1: Kinetic Telemetry Engine -->
+    <template id="mod-telemetry">
+<style>
+    body { background-color: #0d1117; margin:0; padding:15px; }
+    .module-wrapper { display: flex; flex-direction: column; gap: 15px; height: 100%; font-family: 'Courier New', Courier, monospace; color: #c9d1d9; }
+    .module-header { border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+    .module-header h3 { color: #00ffcc; margin: 0 0 5px 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; }
+    .module-header p { font-size: 0.8rem; color: #8b949e; margin: 0; }
+    .canvas-container { width: 100%; background-color: #05070a; border: 1px solid #30363d; border-radius: 4px; position: relative; overflow: hidden; box-shadow: inset 0 0 15px rgba(0,0,0,0.8); }
+    canvas { display: block; width: 100%; height: 350px; }
+    .telemetry-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background-color: #161b22; padding: 15px; border: 1px solid #30363d; border-radius: 4px; }
+    .control-group { display: flex; flex-direction: column; gap: 8px; }
+    label { font-size: 0.8rem; color: #ffd700; text-transform: uppercase; }
+    select, input[type="text"] { background-color: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 8px; font-family: inherit; font-size: 0.85rem; }
+    select:focus, input[type="text"]:focus { outline: none; border-color: #ff00ff; }
+    .btn-action { padding: 8px; background-color: transparent; border: 1px solid #00ffcc; color: #00ffcc; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: all 0.2s; font-family: inherit; }
+    .btn-action:hover { background-color: #00ffcc; color: #0d1117; }
+    .btn-action.halt { border-color: #ff7b72; color: #ff7b72; }
+    .btn-action.halt:hover { background-color: #ff7b72; color: #0d1117; }
+    .hud-overlay { position: absolute; top: 10px; right: 10px; background-color: rgba(13, 17, 23, 0.8); border: 1px solid #30363d; padding: 8px 12px; font-size: 0.75rem; pointer-events: none; }
+    .hud-val { color: #00ffcc; font-weight: bold; }
+    .hud-peak { color: #ff00ff; font-weight: bold; }
+</style>
+<div class="module-wrapper">
+    <div class="module-header">
+        <h3>Kinetic Telemetry Engine</h3>
+        <p>Native GPU-beschleunigte HTML5 Canvas Datenvisualisierung.</p>
+    </div>
+    <div class="canvas-container">
+        <canvas id="telemetry-canvas"></canvas>
+        <div class="hud-overlay">
+            <div>CURR: <span class="hud-val" id="hud-current">0.00</span></div>
+            <div>PEAK: <span class="hud-peak" id="hud-peak">0.00</span></div>
+            <div>FPS:  <span class="hud-val" id="hud-fps">0</span></div>
+        </div>
+    </div>
+    <div class="telemetry-controls">
+        <div class="control-group">
+            <label>Datenquelle (Stream)</label>
+            <select id="data-source"><option value="sine">Resonanz-Welle (Sinus)</option><option value="noise">Stochastisches Rauschen</option><option value="pulse">Elektrokardiogramm (Puls)</option></select>
+            <button class="btn-action" id="btn-toggle">Stream Pausieren</button>
+        </div>
+        <div class="control-group">
+            <label>Geschwindigkeit (Takt)</label>
+            <input type="range" id="speed-slider" min="1" max="20" value="5">
+            <label>Amplitude (Gain)</label>
+            <input type="range" id="gain-slider" min="10" max="200" value="80">
+        </div>
+        <div class="control-group">
+            <label>Statischer CSV Input</label>
+            <input type="text" id="csv-input" placeholder="z.B. 10,40,20,80,30,90,10">
+            <button class="btn-action" id="btn-plot-csv" style="border-color: #ff00ff; color: #ff00ff;">CSV Plotten</button>
+        </div>
+    </div>
+</div>
+<script>
+    const root = document;
+    const canvas = root.getElementById('telemetry-canvas');
+    const ctx = canvas.getContext('2d');
+    const dataSource = root.getElementById('data-source');
+    const speedSlider = root.getElementById('speed-slider');
+    const gainSlider = root.getElementById('gain-slider');
+    const btnToggle = root.getElementById('btn-toggle');
+    const csvInput = root.getElementById('csv-input');
+    const btnPlotCsv = root.getElementById('btn-plot-csv');
+    const hudCurrent = root.getElementById('hud-current');
+    const hudPeak = root.getElementById('hud-peak');
+    const hudFps = root.getElementById('hud-fps');
+
+    function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    setTimeout(resizeCanvas, 50);
+
+    let dataBuffer = [];
+    const MAX_POINTS = 300; 
+    let isRunning = true;
+    let timeStep = 0;
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+
+    for(let i = 0; i < MAX_POINTS; i++) dataBuffer.push(0);
+
+    function generateNextValue() {
+        const type = dataSource.value;
+        const speed = parseFloat(speedSlider.value) / 100;
+        const gain = parseFloat(gainSlider.value);
+        timeStep += speed;
+
+        if (type === 'sine') return Math.sin(timeStep) * (gain * 0.7) + Math.cos(timeStep * 2.5) * (gain * 0.3);
+        else if (type === 'noise') {
+            const randomDelta = (Math.random() - 0.5) * (gain * 0.5);
+            let nextVal = dataBuffer[dataBuffer.length - 1] + randomDelta;
+            if (nextVal > gain) nextVal -= Math.abs(randomDelta) * 2;
+            if (nextVal < -gain) nextVal += Math.abs(randomDelta) * 2;
+            return nextVal;
+        } else if (type === 'pulse') {
+            if (Math.random() > 0.95) return gain;
+            if (Math.random() > 0.9) return -gain * 0.5;
+            return (Math.random() - 0.5) * (gain * 0.05);
+        }
+        return 0;
+    }
+
+    function renderFrame() {
+        const w = canvas.width; const h = canvas.height; const centerY = h / 2;
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = '#161b22'; ctx.lineWidth = 1; ctx.beginPath();
+        for(let x = 0; x < w; x += 50) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+        for(let y = 0; y < h; y += 50) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+        ctx.stroke();
+
+        ctx.strokeStyle = '#30363d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, centerY); ctx.lineTo(w, centerY); ctx.stroke();
+        ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath();
+        
+        const stepX = w / (MAX_POINTS - 1);
+        let currentPeak = 0;
+
+        for (let i = 0; i < MAX_POINTS; i++) {
+            const val = dataBuffer[i];
+            const x = i * stepX;
+            const y = centerY - val;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            if (Math.abs(val) > currentPeak) currentPeak = Math.abs(val);
+        }
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(0, 255, 204, 0.3)'; ctx.lineWidth = 6; ctx.stroke();
+
+        const latestVal = dataBuffer[dataBuffer.length - 1];
+        hudCurrent.textContent = latestVal.toFixed(2);
+        hudPeak.textContent = currentPeak.toFixed(2);
+        hudCurrent.style.color = Math.abs(latestVal) > parseFloat(gainSlider.value) * 0.9 ? '#ff7b72' : '#00ffcc';
+
+        const now = performance.now(); frameCount++;
+        if (now - lastFrameTime >= 1000) { hudFps.textContent = frameCount; frameCount = 0; lastFrameTime = now; }
+    }
+
+    function engineLoop() {
+        if (isRunning) { dataBuffer.shift(); dataBuffer.push(generateNextValue()); }
+        renderFrame();
+        requestAnimationFrame(engineLoop);
+    }
+
+    btnToggle.addEventListener('click', () => {
+        isRunning = !isRunning;
+        if (isRunning) { btnToggle.textContent = 'Stream Pausieren'; btnToggle.classList.remove('halt'); } 
+        else { btnToggle.textContent = 'Stream Fortsetzen'; btnToggle.classList.add('halt'); }
+    });
+
+    btnPlotCsv.addEventListener('click', () => {
+        const raw = csvInput.value; if (!raw) return;
+        const values = raw.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+        if (values.length === 0) return;
+        const maxVal = Math.max(...values.map(Math.abs));
+        gainSlider.value = maxVal > 0 ? maxVal * 1.2 : 100;
+        isRunning = false; btnToggle.textContent = 'Stream Fortsetzen'; btnToggle.classList.add('halt');
+        dataBuffer.fill(0);
+        const startIndex = MAX_POINTS - values.length;
+        for (let i = 0; i < values.length; i++) { if (startIndex + i >= 0 && startIndex + i < MAX_POINTS) { dataBuffer[startIndex + i] = values[i]; } }
+        renderFrame();
+    });
+
+    engineLoop();
+</script>
+    </template>
+
+    <!-- MODULE 2: Acoustic Resonance Engine -->
+    <template id="mod-audio">
+<style>
+    body { background-color: #0d1117; margin:0; padding:15px; }
+    .module-wrapper { display: flex; flex-direction: column; gap: 15px; height: 100%; font-family: 'Courier New', Courier, monospace; color: #c9d1d9;}
+    .module-header { border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+    .module-header h3 { color: #00ffcc; margin: 0 0 5px 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; }
+    .vis-container { width: 100%; height: 380px; background-color: #05070a; border: 1px solid #30363d; border-radius: 4px; position: relative; overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.9); cursor: pointer; }
+    canvas { display: block; width: 100%; height: 100%; }
+    .interface-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .control-panel, .playlist-panel { background-color: #161b22; padding: 15px; border: 1px solid #30363d; border-radius: 4px; display: flex; flex-direction: column; gap: 10px; }
+    .control-group { display: flex; flex-direction: column; gap: 6px; }
+    .slider-container { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
+    .slider-title-row { display: flex; justify-content: space-between; font-size: 0.8rem; }
+    label, .slider-title-row span { color: #ffd700; text-transform: uppercase; }
+    .slider-title-row .val-indicator { color: #00ffcc; font-weight: bold; }
+    select, input[type="file"] { background-color: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 8px; font-family: inherit; font-size: 0.85rem; }
+    input[type="range"] { accent-color: #00ffcc; background: #0d1117; height: 6px; border-radius: 3px; outline: none; }
+    .playback-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .btn-system { padding: 8px; background-color: transparent; border: 1px solid #00ffcc; color: #00ffcc; cursor: pointer; font-weight: bold; text-transform: uppercase; font-family: inherit; font-size: 0.8rem; text-align: center; }
+    .btn-system:hover { background-color: #00ffcc; color: #0d1117; }
+    .playlist-scroll { flex: 1; min-height: 120px; max-height: 220px; background-color: #0d1117; border: 1px solid #30363d; overflow-y: auto; }
+    .track-item { padding: 8px; border-bottom: 1px solid #161b22; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .track-item:hover { background-color: #1f242c; }
+    .track-item.playing { border-left: 3px solid #ff00ff; background-color: #161b22; color: #ff00ff; font-weight: bold; }
+    .track-name { cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+    .btn-remove { color: #ff7b72; cursor: pointer; padding: 2px 6px; font-weight: bold; transition: color 0.1s; }
+    .btn-remove:hover { color: #ff0000; background-color: rgba(255, 123, 114, 0.1); }
+    .status-hud { font-size: 0.8rem; color: #ffd700; text-align: center; min-height: 15px; }
+</style>
+<div class="module-wrapper">
+    <div class="module-header">
+        <h3>Acoustic Resonance Engine V2.4</h3>
+        <span style="font-size: 0.75rem; color: #8b949e;">Adaptive Resolution Core & Hardware Linear Gain Control</span>
+    </div>
+    <audio id="audio-player" style="display: none;"></audio>
+    <div class="vis-container" id="vis-container"><canvas id="vis-canvas"></canvas></div>
+    <div class="interface-grid">
+        <div class="control-panel">
+            <div class="control-group">
+                <label>Visualisierungs-Stil</label>
+                <select id="vis-style">
+                    <option value="bars">Cyberpunk Matrix (Symmetrische Balken)</option>
+                    <option value="orbit" selected>Orbit Resonance (Kreis-Mandala)</option>
+                    <option value="nebula">Kinetic Particle Nebula (Teilchenfeld)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Signalsteuerung</label>
+                <div class="playback-buttons">
+                    <button class="btn-system" id="btn-prev">⏮ Zurück</button>
+                    <button class="btn-system" id="btn-play">▶ Play</button>
+                    <button class="btn-system" id="btn-next">⏭ Vor</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="slider-container">
+                    <div class="slider-title-row"><span>Lautstärke</span><span class="val-indicator" id="val-volume">80%</span></div>
+                    <input type="range" id="slider-volume" min="0" max="1" step="0.01" value="0.80">
+                </div>
+                <div class="slider-container" style="margin-top: 5px;">
+                    <div class="slider-title-row"><span>Sensitivität (Gain)</span><span class="val-indicator" id="val-gain">2.5x</span></div>
+                    <input type="range" id="slider-gain" min="1" max="5" step="0.1" value="2.5">
+                </div>
+            </div>
+        </div>
+        <div class="playlist-panel">
+            <div class="control-group">
+                <label>Audio-Dateien einspeisen</label>
+                <input type="file" id="file-bulk" accept="audio/*" multiple>
+            </div>
+            <label>Aktuelle Sequenz-Warteschlange</label>
+            <div class="playlist-scroll" id="playlist-box"></div>
+        </div>
+    </div>
+    <div class="status-hud" id="hud-status">Audio-Pipeline offline. Bitte Titel laden.</div>
+</div>
+<script>
+    const root = document;
+    const container = root.getElementById('vis-container');
+    const canvas = root.getElementById('vis-canvas');
+    const ctx = canvas.getContext('2d');
+    const fileBulk = root.getElementById('file-bulk');
+    const playlistBox = root.getElementById('playlist-box');
+    const visStyle = root.getElementById('vis-style');
+    const sliderVolume = root.getElementById('slider-volume');
+    const valVolume = root.getElementById('val-volume');
+    const sliderGain = root.getElementById('slider-gain');
+    const valGain = root.getElementById('val-gain');
+    const hudStatus = root.getElementById('hud-status');
+    const btnPlay = root.getElementById('btn-play');
+    const btnPrev = root.getElementById('btn-prev');
+    const btnNext = root.getElementById('btn-next');
+    const audioPlayer = root.getElementById('audio-player'); 
+    
+    let audioCtx = null; let analyser = null; let audioSource = null;
+    let dataArray = []; let bufferLength = 0; let isContextInitialized = false;
+    let playlist = []; let currentTrackIndex = -1;
+
+    const particles = []; const NUM_PARTICLES = 120;
+    for (let i = 0; i < NUM_PARTICLES; i++) {
+        particles.push({
+            x: Math.random(), y: Math.random(), radius: Math.random() * 3 + 1,
+            baseSpeedX: (Math.random() - 0.5) * 0.5, baseSpeedY: (Math.random() - 0.5) * 0.5,
+            color: Math.random() > 0.5 ? '#00ffcc' : '#ff00ff'
+        });
+    }
+    let peaks = [];
+
+    audioPlayer.volume = parseFloat(sliderVolume.value);
+
+    function resizeCanvas() {
+        const rect = container.getBoundingClientRect();
+        canvas.width = rect.width; canvas.height = rect.height;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    setTimeout(resizeCanvas, 50);
+
+    sliderVolume.addEventListener('input', (e) => {
+        audioPlayer.volume = parseFloat(e.target.value);
+        valVolume.textContent = Math.round(e.target.value * 100) + '%';
+    });
+    sliderGain.addEventListener('input', (e) => { valGain.textContent = parseFloat(e.target.value).toFixed(1) + 'x'; });
+
+    function updatePlaylistUI() {
+        playlistBox.innerHTML = '';
+        if (playlist.length === 0) return;
+        playlist.forEach((track, index) => {
+            const item = document.createElement('div');
+            item.className = `track-item ${index === currentTrackIndex ? 'playing' : ''}`;
+            const nameSpan = document.createElement('div');
+            nameSpan.className = 'track-name'; nameSpan.textContent = `${index + 1}. ${track.name}`;
+            nameSpan.addEventListener('click', () => executeTrackRouting(index));
+            const removeBtn = document.createElement('div');
+            removeBtn.className = 'btn-remove'; removeBtn.textContent = '✖';
+            removeBtn.addEventListener('click', (e) => { e.stopPropagation(); removeTrackFromSequence(index); });
+            item.appendChild(nameSpan); item.appendChild(removeBtn); playlistBox.appendChild(item);
+        });
+    }
+
+    function removeTrackFromSequence(index) {
+        URL.revokeObjectURL(playlist[index].url);
+        playlist.splice(index, 1);
+        if (currentTrackIndex === index) { audioPlayer.pause(); audioPlayer.src = ''; currentTrackIndex = -1; btnPlay.textContent = '▶ Play'; } 
+        else if (currentTrackIndex > index) currentTrackIndex--;
+        updatePlaylistUI();
+    }
+
+    function executeTrackRouting(index) {
+        if (index < 0 || index >= playlist.length) return;
+        currentTrackIndex = index;
+        if (!isContextInitialized) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioCtx.createAnalyser(); analyser.fftSize = 512;
+            bufferLength = analyser.frequencyBinCount; dataArray = new Uint8Array(bufferLength); peaks = new Array(bufferLength).fill(0);
+            audioSource = audioCtx.createMediaElementSource(audioPlayer);
+            audioSource.connect(analyser); analyser.connect(audioCtx.destination);
+            isContextInitialized = true;
+        }
+        audioPlayer.src = playlist[index].url; audioPlayer.play();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        updatePlaylistUI();
+        hudStatus.textContent = `LÄUFT: ${playlist[index].name}`; hudStatus.style.color = '#00ffcc';
+    }
+
+    fileBulk.addEventListener('change', (e) => {
+        Array.from(e.target.files).forEach(file => { playlist.push({ name: file.name, url: URL.createObjectURL(file) }); });
+        updatePlaylistUI();
+        if (currentTrackIndex === -1 && playlist.length > 0) executeTrackRouting(0);
+        e.target.value = '';
+    });
+
+    audioPlayer.addEventListener('play', () => btnPlay.textContent = '⏸ Pause');
+    audioPlayer.addEventListener('pause', () => btnPlay.textContent = '▶ Play');
+    audioPlayer.addEventListener('ended', () => {
+        if (currentTrackIndex < playlist.length - 1) executeTrackRouting(currentTrackIndex + 1);
+    });
+
+    btnPlay.addEventListener('click', () => {
+        if (currentTrackIndex === -1 && playlist.length > 0) executeTrackRouting(0);
+        else if (audioPlayer.paused) audioPlayer.play(); else audioPlayer.pause();
+    });
+    btnNext.addEventListener('click', () => { if(playlist.length>0) executeTrackRouting((currentTrackIndex + 1) % playlist.length); });
+    btnPrev.addEventListener('click', () => { if(playlist.length>0) executeTrackRouting((currentTrackIndex - 1 + playlist.length) % playlist.length); });
+
+    function renderPipeline() {
+        requestAnimationFrame(renderPipeline);
+        const w = canvas.width; const h = canvas.height; const centerX = w / 2; const centerY = h / 2;
+        ctx.fillStyle = '#05070a'; ctx.fillRect(0, 0, w, h);
+
+        if (!isContextInitialized) {
+            ctx.strokeStyle = '#222831'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, centerY);
+            for(let i=0; i<w; i++) ctx.lineTo(i, centerY + Math.sin(i * 0.015 + Date.now() * 0.003) * 8);
+            ctx.stroke(); return;
+        }
+
+        analyser.getByteFrequencyData(dataArray);
+        const gain = parseFloat(sliderGain.value); const currentStyle = visStyle.value;
+
+        if (currentStyle === 'bars') {
+            const barWidth = (w / bufferLength) * 1.5; let x = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                let val = dataArray[i] * gain * 1.2; if (val > h * 0.95) val = h * 0.95;
+                if (val > peaks[i]) peaks[i] = val; else peaks[i] -= 2.0;
+                const ratio = i / bufferLength; ctx.fillStyle = `rgb(${Math.floor(ratio * 255)}, ${Math.floor((1 - ratio) * 255)}, 204)`;
+                ctx.fillRect(centerX + x, h - val, barWidth - 2, val); ctx.fillRect(centerX - x - barWidth, h - val, barWidth - 2, val);
+                x += barWidth; if (centerX + x > w) break;
             }
+        }
+        else if (currentStyle === 'orbit') {
+            let bassSum = 0; for (let i = 0; i < 15; i++) bassSum += dataArray[i];
+            const baseRadius = Math.min(w, h) * 0.22 + ((bassSum / 15) * gain * 0.25);
+            ctx.lineWidth = 3; ctx.lineJoin = 'round';
+            ctx.strokeStyle = '#ff00ff'; ctx.beginPath();
+            for (let i = 0; i < bufferLength; i++) {
+                const angle = (i / bufferLength) * Math.PI * 2; const r = baseRadius + dataArray[i] * gain * 0.7;
+                if (i === 0) ctx.moveTo(centerX + Math.cos(angle) * r, centerY + Math.sin(angle) * r); else ctx.lineTo(centerX + Math.cos(angle) * r, centerY + Math.sin(angle) * r);
+            }
+            ctx.closePath(); ctx.stroke();
+        }
+        else if (currentStyle === 'nebula') {
+            let bass = 0; for(let i=0; i<15; i++) bass += dataArray[i]; bass = (bass / 15) * gain;
+            particles.forEach((p) => {
+                p.x += p.baseSpeedX * (1 + bass * 0.06) * 0.12; p.y += p.baseSpeedY * (1 + bass * 0.06) * 0.12;
+                if (p.x < 0) p.x = 1; if (p.x > 1) p.x = 0; if (p.y < 0) p.y = 1; if (p.y > 1) p.y = 0;
+                ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x * w, p.y * h, Math.max(0.5, p.radius), 0, Math.PI * 2); ctx.fill();
+            });
+        }
+    }
+    renderPipeline();
+</script>
+    </template>
+
+    <!-- MODULE 3: Advanced Document Matrix -->
+    <template id="mod-doc">
+<style>
+    body { background-color: #0d1117; margin:0; padding:15px; font-family: sans-serif;}
+    .toolbar { background-color: #161b22; border: 1px solid #30363d; border-bottom: none; padding: 10px; display: flex; gap: 10px; }
+    button { background: transparent; border: 1px solid #00ffcc; color: #00ffcc; padding: 5px 10px; cursor: pointer; text-transform: uppercase; font-weight: bold; font-family: monospace;}
+    button:hover { background: #00ffcc; color: #0d1117; }
+    .editor-viewport { flex: 1; display: flex; justify-content: center; overflow-y: auto; padding: 20px; background: #05070a; border: 1px solid #30363d; height: calc(100vh - 80px);}
+    .a4-page { width: 210mm; min-height: 297mm; background: white; color: black; padding: 20mm; box-shadow: 0 0 15px rgba(0,0,0,0.5); outline: none; }
+</style>
+<div class="toolbar">
+    <button onclick="document.execCommand('bold')">B</button>
+    <button onclick="document.execCommand('italic')">I</button>
+    <button onclick="document.execCommand('underline')">U</button>
+    <span style="color:#ffd700; font-size:14px; margin-left:10px; align-self:center; font-family: monospace; text-transform: uppercase;">Advanced Document Matrix (Offline Mode)</span>
+</div>
+<div class="editor-viewport">
+    <div class="a4-page" contenteditable="true"><h2>A.R.T.E. Dokument</h2><p>Beginne hier mit dem Schreiben...</p></div>
+</div>
+    </template>
+
+    <!-- MODULE 4: Web Synthesis Matrix -->
+    <template id="mod-web">
+<style>
+    body { background-color: #0d1117; color: #c9d1d9; font-family: monospace; margin:0; padding:15px; display:flex; gap: 15px; height: 100vh; flex-direction: column;}
+    .header-bar { font-size: 14px; color: #ffd700; text-transform: uppercase; }
+    .split { display: flex; gap: 15px; flex: 1; }
+    textarea { flex: 1; background: #161b22; color: #00ffcc; border: 1px solid #30363d; padding: 20px; outline: none; resize: none; font-family: 'Courier New', Courier, monospace;}
+    iframe { flex: 1; border: 1px solid #30363d; background: #fff;}
+</style>
+<div class="header-bar">Live Web Synthesis Matrix</div>
+<div class="split">
+    <textarea id="code" spellcheck="false"><h1>A.R.T.E. Web Matrix</h1>
+<style>
+    body { font-family: sans-serif; text-align: center; margin-top: 50px; }
+    h1 { color: #ff00ff; }
+</style>
+<p>Live Code Sandbox.</p></textarea>
+    <iframe id="preview"></iframe>
+</div>
+<script>
+    const code = document.getElementById('code');
+    const preview = document.getElementById('preview');
+    function update() { preview.srcdoc = code.value; }
+    code.addEventListener('input', update);
+    update();
+</script>
+    </template>
+
+
+    <!-- ========================================================================= -->
+    <!-- LAUNCHER ENGINE (INJECTION SCRIPT) -->
+    <!-- ========================================================================= -->
+    <script>
+        const modules = [
+            { id: "mod-telemetry", name: "Kinetic Telemetry Engine", desc: "GPU-beschleunigte Datenvisualisierung." },
+            { id: "mod-audio", name: "Acoustic Resonance Engine", desc: "Audio-Visualisierung & Hardware Control." },
+            { id: "mod-doc", name: "Advanced Document Matrix", desc: "WYSIWYG A4-Simulation Editor." },
+            { id: "mod-web", name: "Web Synthesis Matrix", desc: "Live HTML/CSS/JS Sandbox." }
         ];
 
         const listContainer = document.getElementById('module-list');
         const viewport = document.getElementById('app-viewport');
-        const loader = document.getElementById('loader');
         const urlDisplay = document.getElementById('current-url');
 
-        // 1. Liste aufbauen
-        modules.forEach((mod, index) => {
+        modules.forEach((mod) => {
             const li = document.createElement('li');
             li.className = 'module-item';
             li.innerHTML = `
@@ -268,57 +629,32 @@
             `;
             
             li.addEventListener('click', () => {
-                // Aktive Klasse setzen
                 document.querySelectorAll('.module-item').forEach(el => el.classList.remove('active'));
                 li.classList.add('active');
-                
-                // Modul laden
-                loadModuleFromGitHub(mod.file);
+                injectModule(mod.id, mod.name);
             });
 
             listContainer.appendChild(li);
         });
 
-        // 2. Modul vom GitHub Server fetchen und in die Sandbox injizieren
-        async function loadModuleFromGitHub(filename) {
-            loader.style.display = 'flex';
-            urlDisplay.textContent = `Fetching: /Module/${filename}`;
+        function injectModule(templateId, moduleName) {
+            urlDisplay.textContent = `Injecting: ${moduleName}`;
             
             try {
-                // Wir holen uns den exakten Code live aus deinem Repository!
-                const response = await fetch(GITHUB_RAW_BASE + filename);
-                
-                if (!response.ok) {
-                    throw new Error(`GitHub meldet Fehler: ${response.status}`);
-                }
+                // Den exakten Quellcode direkt aus dem HTML Template auslesen
+                const template = document.getElementById(templateId);
+                let htmlCode = template.innerHTML;
 
-                let htmlCode = await response.text();
+                // Native Injektion über contentDocument (100% Synchron, kein Absturz der Canvas-Engines)
+                const doc = viewport.contentWindow.document;
+                doc.open();
+                doc.write(htmlCode);
+                doc.close();
 
-                // Da einige deiner Module auf den ShadowDOM ausgerichtet sind, 
-                // sorgen wir dafür, dass sie im Iframe (der keinen ShadowDOM nutzt, 
-                // sondern das reguläre document) trotzdem sauber laufen.
-                // Deine Module haben bereits diese geniale Weiche eingebaut: 
-                // "const root = typeof shadowRoot !== 'undefined' ? shadowRoot : document;"
-                
-                // Wir injizieren den Code direkt in den Iframe
-                viewport.srcdoc = htmlCode;
-                urlDisplay.textContent = `Live: ${filename}`;
-
+                urlDisplay.textContent = `Live: ${moduleName}`;
             } catch (error) {
                 console.error(error);
-                viewport.srcdoc = `
-                    <div style="color: red; font-family: monospace; padding: 20px;">
-                        <h3>System Error</h3>
-                        <p>Konnte das Modul nicht von GitHub laden.</p>
-                        <p>Details: ${error.message}</p>
-                    </div>
-                `;
-                urlDisplay.textContent = "Fehler beim Laden";
-            } finally {
-                // Kurzer Delay, damit der Browser rendern kann
-                setTimeout(() => {
-                    loader.style.display = 'none';
-                }, 500);
+                urlDisplay.textContent = "Fehler bei lokaler Injektion";
             }
         }
     </script>
