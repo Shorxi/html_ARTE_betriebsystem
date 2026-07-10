@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A.R.T.E. Live Demo Matrix</title>
+    <style>
+        :root {
+            --bg-main: #05070a;
+            --bg-panel: #0d1117;
+            --border-color: #30363d;
+            --text-main: #c9d1d9;
+            --accent-cyan: #00ffcc;
+            --accent-magenta: #ff00ff;
+            --warning-yellow: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: #161b22;
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            color: var(--accent-cyan);
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .status-badge {
+            background-color: rgba(0, 255, 204, 0.1);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        /* --- Main Layout --- */
+        .matrix-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar (Modul-Bibliothek) --- */
+        .sidebar {
+            width: 320px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-title {
+            padding: 15px;
+            font-size: 0.9rem;
+            color: var(--warning-yellow);
+            border-bottom: 1px solid var(--border-color);
+            text-transform: uppercase;
+            background-color: #161b22;
+        }
+
+        .module-list {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .module-item {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .module-item:hover {
+            background-color: rgba(0, 255, 204, 0.05);
+            border-left: 4px solid var(--accent-cyan);
+            padding-left: 11px;
+        }
+
+        .module-item.active {
+            background-color: #161b22;
+            border-left: 4px solid var(--accent-magenta);
+            padding-left: 11px;
+        }
+
+        .module-name {
+            color: var(--text-main);
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .module-item.active .module-name {
+            color: var(--accent-magenta);
+        }
+
+        .module-desc {
+            font-size: 0.75rem;
+            color: #8b949e;
+        }
+
+        /* --- Viewport (Der Simulator) --- */
+        .viewport-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #000;
+            position: relative;
+        }
+
+        .viewport-header {
+            background-color: #161b22;
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 15px;
+            font-size: 0.8rem;
+            color: #8b949e;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #current-url {
+            color: var(--accent-cyan);
+            font-style: italic;
+        }
+
+        iframe {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background-color: #ffffff; /* Fallback für helle Module */
+        }
+
+        /* Loading Screen */
+        .loader-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(5, 7, 10, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            display: none;
+        }
+
+        .loader-spinner {
+            border: 3px solid #30363d;
+            border-top: 3px solid var(--accent-magenta);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>A.R.T.E. Live Demo Matrix</h1>
+        <div class="status-badge">GitHub Cloud Sync Active</div>
+    </header>
+
+    <div class="matrix-container">
+        
+        <!-- Linke Seite: Modul Auswahl -->
+        <div class="sidebar">
+            <div class="sidebar-title">Verfügbare Module</div>
+            <ul class="module-list" id="module-list">
+                <!-- Die Module werden dynamisch aus deinem GitHub Repo geladen -->
+            </ul>
+        </div>
+
+        <!-- Rechte Seite: Live Ausführung -->
+        <div class="viewport-container">
+            <div class="viewport-header">
+                <span>Ausführungsumgebung (Sandbox)</span>
+                <span id="current-url">Wähle ein Modul aus...</span>
+            </div>
+            
+            <div class="loader-overlay" id="loader">
+                <div class="loader-spinner"></div>
+                <div style="color: #00ffcc;">Kompiliere Modul-Architektur...</div>
+            </div>
+
+            <iframe id="app-viewport" sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-popups"></iframe>
+        </div>
+
+    </div>
+
+    <script>
+        // === A.R.T.E. LIVE DEMO ENGINE ===
+        
+        // Die Basis-URL zu deinem Raw-GitHub Code (main branch)
+        const GITHUB_RAW_BASE = "https://raw.githubusercontent.com/Shorxi/html_ARTE_betriebsystem/main/Module/";
+
+        // Definition der Module, die in der Demo verfügbar sein sollen
+        const modules = [
+            {
+                name: "Kinetic Telemetry Engine",
+                file: "Kinetic_Telemetry_&_Canvas_Engine.html",
+                desc: "GPU-beschleunigte HTML5 Canvas Datenvisualisierung."
+            },
+            {
+                name: "Optical Contour Synthesizer",
+                file: "Optical_Contour_&_Blueprint_Synthesizer.html",
+                desc: "Lokale Pixel Edge-Detection (Blueprint Creator)."
+            },
+            {
+                name: "Advanced Document Matrix",
+                file: "text_editor.html",
+                desc: "WYSIWYG A4-Simulation & Multi-Format Editor."
+            },
+            {
+                name: "Web Synthesis Matrix",
+                file: "Web_Editor.html",
+                desc: "Live HTML/CSS/JS Editor mit Real-Time Execution."
+            },
+            {
+                name: "Acoustic Resonance Engine",
+                file: "Audio_Analyser-Pipeline.html",
+                desc: "Audio-Visualisierung & Hardware Gain Control."
+            }
+        ];
+
+        const listContainer = document.getElementById('module-list');
+        const viewport = document.getElementById('app-viewport');
+        const loader = document.getElementById('loader');
+        const urlDisplay = document.getElementById('current-url');
+
+        // 1. Liste aufbauen
+        modules.forEach((mod, index) => {
+            const li = document.createElement('li');
+            li.className = 'module-item';
+            li.innerHTML = `
+                <div class="module-name">${mod.name}</div>
+                <div class="module-desc">${mod.desc}</div>
+            `;
+            
+            li.addEventListener('click', () => {
+                // Aktive Klasse setzen
+                document.querySelectorAll('.module-item').forEach(el => el.classList.remove('active'));
+                li.classList.add('active');
+                
+                // Modul laden
+                loadModuleFromGitHub(mod.file);
+            });
+
+            listContainer.appendChild(li);
+        });
+
+        // 2. Modul vom GitHub Server fetchen und in die Sandbox injizieren
+        async function loadModuleFromGitHub(filename) {
+            loader.style.display = 'flex';
+            urlDisplay.textContent = `Fetching: /Module/${filename}`;
+            
+            try {
+                // Wir holen uns den exakten Code live aus deinem Repository!
+                const response = await fetch(GITHUB_RAW_BASE + filename);
+                
+                if (!response.ok) {
+                    throw new Error(`GitHub meldet Fehler: ${response.status}`);
+                }
+
+                let htmlCode = await response.text();
+
+                // Da einige deiner Module auf den ShadowDOM ausgerichtet sind, 
+                // sorgen wir dafür, dass sie im Iframe (der keinen ShadowDOM nutzt, 
+                // sondern das reguläre document) trotzdem sauber laufen.
+                // Deine Module haben bereits diese geniale Weiche eingebaut: 
+                // "const root = typeof shadowRoot !== 'undefined' ? shadowRoot : document;"
+                
+                // Wir injizieren den Code direkt in den Iframe
+                viewport.srcdoc = htmlCode;
+                urlDisplay.textContent = `Live: ${filename}`;
+
+            } catch (error) {
+                console.error(error);
+                viewport.srcdoc = `
+                    <div style="color: red; font-family: monospace; padding: 20px;">
+                        <h3>System Error</h3>
+                        <p>Konnte das Modul nicht von GitHub laden.</p>
+                        <p>Details: ${error.message}</p>
+                    </div>
+                `;
+                urlDisplay.textContent = "Fehler beim Laden";
+            } finally {
+                // Kurzer Delay, damit der Browser rendern kann
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                }, 500);
+            }
+        }
+    </script>
+</body>
+</html>
