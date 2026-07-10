@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Origin - OS Control Room V3.2</title>
+    <style>
+        /* Core System Theme: Dark Mode / Console Aesthetic */
+        :root {
+            --bg-base: #0d1117;
+            --bg-panel: #161b22;
+            --border-color: #30363d;
+            --text-main: #c9d1d9;
+            --accent-cyan: #00ffcc;
+            --accent-magenta: #ff00ff;
+            --accent-yellow: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Navigation / Branding Status Bar */
+        #os-header {
+            background-color: var(--bg-base);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sys-branding {
+            color: var(--text-main);
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            border-left: 3px solid var(--accent-cyan);
+            padding-left: 10px;
+        }
+
+        .sys-branding strong {
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        .sys-status {
+            color: var(--accent-yellow);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        /* Browser-Style Tab Bar Component */
+        #os-tab-bar {
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            padding-top: 5px;
+            padding-left: 10px;
+            gap: 4px;
+            overflow-x: auto;
+        }
+
+        #os-tab-bar::-webkit-scrollbar { height: 3px; }
+        #os-tab-bar::-webkit-scrollbar-thumb { background: var(--border-color); }
+
+        .os-tab {
+            background-color: #0d1117;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            color: #8b949e;
+            padding: 8px 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            white-space: nowrap;
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .os-tab:hover {
+            color: var(--text-main);
+            background-color: #1f242c;
+        }
+
+        .os-tab.active {
+            background-color: var(--bg-panel);
+            color: var(--accent-cyan);
+            border-top: 2px solid var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        /* Workspace Viewport Container */
+        #os-workspace {
+            flex: 1;
+            background-color: var(--bg-panel);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .os-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 25px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .os-view.active { display: block; }
+
+        /* Core Dashboard Layout */
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 450px 1fr;
+            gap: 25px;
+            height: 100%;
+            align-items: start;
+        }
+
+        .panel-section {
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 5px;
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .panel-section h3 {
+            color: var(--accent-magenta);
+            font-size: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .instruction-box {
+            background-color: rgba(255, 215, 0, 0.05);
+            border: 1px solid var(--accent-yellow);
+            color: var(--accent-yellow);
+            padding: 12px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            line-height: 1.5;
+        }
+
+        .instruction-box span { font-weight: bold; color: #ffffff; }
+
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 4px;
+            padding: 25px 20px;
+            text-align: center;
+            background-color: var(--bg-panel);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #8b949e;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent-cyan);
+            background-color: rgba(0, 255, 204, 0.05);
+            color: var(--accent-cyan);
+        }
+
+        .drop-zone svg { stroke: currentColor; width: 32px; height: 32px; }
+
+        label { font-size: 0.85rem; color: #8b949e; }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px;
+            font-family: inherit;
+            resize: none;
+            font-size: 0.85rem;
+        }
+
+        textarea:focus { outline: none; border-color: var(--accent-cyan); }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: transparent;
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease-in-out;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:hover { background-color: var(--accent-cyan); color: var(--bg-base); }
+
+        #sys-log {
+            height: 100%;
+            min-height: 500px;
+            background-color: #05070a;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 15px;
+            font-size: 0.85rem;
+            overflow-y: auto;
+            color: #8b949e;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+        
+        .log-entry.error { color: #ff7b72; }
+        .log-entry.success { color: var(--accent-cyan); }
+        .log-entry.info { color: #8b949e; }
+        .log-entry.warning { color: var(--accent-yellow); }
+
+        .module-viewport-wrapper { max-width: 1400px; margin: 0 auto; height: 100%; }
+    </style>
+</head>
+<body>
+
+    <header id="os-header">
+        <div class="sys-branding">
+            Architekt <strong>Emanuel Schaaf</strong> in Kooperation mit <strong>Google KI</strong> erzeugtes System Framework Copyright
+        </div>
+        <div class="sys-status">Kernel: V3.2-Tabs | Modules: <span id="module-count">0</span></div>
+    </header>
+
+    <nav id="os-tab-bar">
+        <div class="os-tab active" id="tab-core-control" onclick="Core.switchTab('view-core-control')">
+            🔒 Core Control
+        </div>
+    </nav>
+
+    <div id="os-workspace">
+        
+        <div id="view-core-control" class="os-view active">
+            <div class="dashboard-layout">
+                <div class="panel-section">
+                    <h3>Module Injection Matrix</h3>
+                    
+                    <div class="instruction-box">
+                        <span>WICHTIGE BOOT-REIHENFOLGE EINHALTEN:</span><br><br>
+                        1. ARTE_Core_DB.html<br>
+                        2. System_Telemetry_Node_V2<br>
+                        3. Danach alle weiteren Module aus dem Module-Ordner hinzufügen.
+                    </div>
+
+                    <div class="drop-zone" id="file-drop-zone">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p>Module hierher ziehen (Drag & Drop)<br>oder klicken zum Hochladen</p>
+                        <input type="file" id="module-file-upload" accept=".html,.txt" multiple style="display:none;">
+                    </div>
+
+                    <div style="margin-top: 10px;">
+                        <label for="raw-html-input">Manuelle Raw-Code Injektion (Fallback):</label>
+                        <textarea id="raw-html-input" placeholder="<div>Modul-Struktur...</div><style>...</style><script>...<\/script>"></textarea>
+                        <button onclick="Core.adoptFromCode()">Adopt & Save Code</button>
+                    </div>
+                </div>
+                
+                <div id="sys-log"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /**
+         * Open Origin Architecture - Tabbed Persistent Kernel V3.2
+         * Core Mechanics: EventBus, ShadowDOM Isolation, UI Tab Abstraction & IndexedDB
+         */
+        
+        const EventBus = {
+            listeners: {},
+            on: function(event, callback) {
+                if (!this.listeners[event]) this.listeners[event] = [];
+                this.listeners[event].push(callback);
+            },
+            emit: function(event, data) {
+                if (this.listeners[event]) {
+                    this.listeners[event].forEach(callback => callback(data));
+                }
+            }
+        };
+
+        window.osBus = EventBus;
+
+        const DB_NAME = 'ARTE_Core_DB';
+        const STORE_NAME = 'installed_modules';
+
+        const Core = {
+            moduleCounter: 0,
+            db: null,
+            activeTabId: 'view-core-control',
+            
+            log: function(msg, type = 'info') {
+                const logBox = document.getElementById('sys-log');
+                if (!logBox) return;
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                const time = new Date().toLocaleTimeString();
+                entry.textContent = `[${time}] ${msg}`;
+                logBox.appendChild(entry);
+                logBox.scrollTop = logBox.scrollHeight;
+            },
+
+            updateCount: function() {
+                document.getElementById('module-count').textContent = this.moduleCounter;
+            },
+
+            switchTab: function(viewId) {
+                document.querySelectorAll('.os-view').forEach(v => v.classList.remove('active'));
+                document.querySelectorAll('.os-tab').forEach(t => t.classList.remove('active'));
+
+                const targetView = document.getElementById(viewId);
+                if (targetView) targetView.classList.add('active');
+
+                const tabs = document.querySelectorAll('.os-tab');
+                tabs.forEach(tab => {
+                    if (tab.getAttribute('data-target') === viewId || (viewId === 'view-core-control' && tab.id === 'tab-core-control')) {
+                        tab.classList.add('active');
+                    }
+                });
+
+                this.activeTabId = viewId;
+            },
+
+            initStorage: function() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(DB_NAME, 1);
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(STORE_NAME)) {
+                            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                        }
+                    };
+                    request.onsuccess = (e) => {
+                        this.db = e.target.result;
+                        resolve();
+                    };
+                    request.onerror = (e) => {
+                        this.log(`Datenbank-Fehler: ${e.target.error}`, 'error');
+                        reject(e.target.error);
+                    };
+                });
+            },
+
+            saveModuleToStorage: function(id, title, htmlString) {
+                if (!this.db) return;
+                const transaction = this.db.transaction(STORE_NAME, 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const record = { id: id, title: title, code: htmlString, timestamp: new Date().toLocaleString() };
+                
+                store.put(record);
+                transaction.oncomplete = () => {
+                    this.log(`Modul '${title}' persistent im Langzeitspeicher verankert.`, 'success');
+                    window.osBus.emit('module-saved', record);
+                };
+            },
+
+            // Die überarbeitete Tab-Erzeugung für sauberes UI vs. DB-Namen
+            createTabElement: function(viewId, displayName, realTitle) {
+                const tabBar = document.getElementById('os-tab-bar');
+                const tab = document.createElement('div');
+                tab.className = 'os-tab';
+                tab.setAttribute('data-target', viewId);
+                
+                // Im UI steht "Modul-X"
+                tab.textContent = displayName;
+                
+                // Hover-Effekt zeigt den wahren Namen aus der Datenbank
+                if (realTitle) {
+                    tab.title = realTitle;
+                }
+                
+                tab.addEventListener('click', () => this.switchTab(viewId));
+                tabBar.appendChild(tab);
+            },
+
+            adoptModule: function(htmlString, sourceName, saveToDB = true) {
+                try {
+                    this.moduleCounter++;
+                    const timestampId = new Date().getTime();
+                    const moduleId = 'mod_' + timestampId + '_' + this.moduleCounter;
+                    const tagName = `arte-module-${this.moduleCounter}`;
+                    const viewId = `view_${moduleId}`;
+                    
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlString, 'text/html');
+
+                    class DynamicModule extends HTMLElement {
+                        constructor() {
+                            super();
+                            const shadow = this.attachShadow({mode: 'open'});
+                            const container = document.createElement('div');
+                            container.className = "module-viewport-wrapper";
+                            container.style.height = '100%';
+                            container.style.overflow = 'auto';
+
+                            const scripts = Array.from(doc.querySelectorAll('script'));
+                            scripts.forEach(s => s.remove());
+
+                            const template = document.createElement('div');
+                            template.innerHTML = doc.head.innerHTML + doc.body.innerHTML;
+                            container.appendChild(template);
+                            shadow.appendChild(container);
+
+                            scripts.forEach(script => {
+                                const newScript = document.createElement('script');
+                                if (script.src) {
+                                    newScript.src = script.src;
+                                } else {
+                                    newScript.textContent = `
+                                        (function() {
+                                            try {
+                                                const shadowRoot = document.getElementById('${viewId}').querySelector('${tagName}').shadowRoot;
+                                                ${script.textContent}
+                                            } catch (e) {
+                                                console.error('[Module Script Error]', e);
+                                            }
+                                        })();
+                                    `;
+                                }
+                                shadow.appendChild(newScript);
+                            });
+                        }
+                    }
+
+                    customElements.define(tagName, DynamicModule);
+                    
+                    const viewContainer = document.createElement('div');
+                    viewContainer.id = viewId;
+                    viewContainer.className = 'os-view';
+                    
+                    const instance = document.createElement(tagName);
+                    viewContainer.appendChild(instance);
+                    document.getElementById('os-workspace').appendChild(viewContainer);
+                    
+                    // UI Tab wird generisch "Modul-X" benannt, Hover-Tooltip erhält "sourceName"
+                    const tabDisplayName = `Modul-${this.moduleCounter}`;
+                    this.createTabElement(viewId, tabDisplayName, sourceName);
+                    
+                    this.updateCount();
+                    
+                    if (saveToDB) {
+                        // In der Datenbank wird der echte Name ("sourceName") gesichert
+                        this.saveModuleToStorage(moduleId, sourceName, htmlString);
+                        this.switchTab(viewId);
+                    } else {
+                        this.log(`Modul '${sourceName}' wiederhergestellt.`, 'info');
+                    }
+                } catch (error) {
+                    this.log(`Adoption failed: ${error.message}`, 'error');
+                    console.error(error);
+                }
+            },
+
+            adoptFromCode: function() {
+                const code = document.getElementById('raw-html-input').value;
+                if (!code.trim()) {
+                    this.log('Injektions-Feld leer.', 'error');
+                    return;
+                }
+                
+                // Falls man den Code manuell injiziert, bekommt er einen generischen echten Namen
+                const manualName = `Manual_Injection_${this.moduleCounter + 1}`;
+                this.adoptModule(code, manualName, true);
+                document.getElementById('raw-html-input').value = '';
+            },
+
+            handleFiles: function(files) {
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const content = e.target.result;
+                        const moduleName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                        this.log(`Lese Datei ein: ${file.name}...`, 'info');
+                        this.adoptModule(content, moduleName, true);
+                    };
+                    reader.onerror = () => this.log(`Fehler beim Lesen der Datei ${file.name}.`, 'error');
+                    reader.readAsText(file, "UTF-8");
+                });
+            },
+
+            bootSystem: async function() {
+                this.log('A.R.T.E. Kernel bootet... Synchronisiere Sektoren.', 'info');
+                try {
+                    await this.initStorage();
+                    this.log('Lokales Zentrallager aktiv.', 'success');
+
+                    const transaction = this.db.transaction(STORE_NAME, 'readonly');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.getAll();
+
+                    request.onsuccess = () => {
+                        const modules = request.result;
+                        if (modules.length > 0) {
+                            this.log(`${modules.length} Module im Speicher erfasst. Initialisiere Tabs...`, 'info');
+                            modules.forEach(mod => {
+                                // 'mod.title' ist der echte Name aus der DB
+                                this.adoptModule(mod.code, mod.title, false);
+                            });
+                            Core.switchTab('view-core-control');
+                        } else {
+                            this.log('Keine persistenten Module vorhanden. Warte auf Injektion.', 'warning');
+                        }
+                    };
+                } catch (e) {
+                    this.log('Kritischer Defekt in der Speicher-Engine beim Booten.', 'error');
+                }
+            }
+        };
+
+        const dropZone = document.getElementById('file-drop-zone');
+        const fileUpload = document.getElementById('module-file-upload');
+
+        dropZone.addEventListener('click', () => fileUpload.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                Core.handleFiles(e.dataTransfer.files);
+            }
+        });
+
+        fileUpload.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                Core.handleFiles(e.target.files);
+            }
+            e.target.value = '';
+        });
+
+        window.osBus.on('log', (data) => {
+            Core.log(`[Bus Message] ${data.msg}`, 'info');
+        });
+
+        window.onload = () => {
+            Core.bootSystem();
+        };
+    </script>
+</body>
+</html>

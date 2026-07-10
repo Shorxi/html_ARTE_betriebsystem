@@ -1,0 +1,318 @@
+<style>
+    /* Hermetisch isoliertes Design im System-Theme */
+    .module-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        height: 100%;
+        font-family: 'Courier New', Courier, monospace;
+        color: #c9d1d9;
+    }
+
+    .module-header {
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 8px;
+    }
+
+    .module-header h3 {
+        color: #00ffcc;
+        margin: 0 0 5px 0;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+    }
+
+    .module-header p {
+        font-size: 0.8rem;
+        color: #8b949e;
+        margin: 0;
+    }
+
+    .storage-meta {
+        display: flex;
+        justify-content: space-between;
+        background-color: #0d1117;
+        padding: 10px;
+        border: 1px solid #30363d;
+        font-size: 0.85rem;
+    }
+
+    .meta-value {
+        color: #ffd700;
+        font-weight: bold;
+    }
+
+    .module-list-container {
+        flex: 1;
+        min-height: 150px;
+        max-height: 250px;
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        overflow-y: auto;
+        padding: 5px;
+    }
+
+    .module-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        border-bottom: 1px solid #161b22;
+        font-size: 0.85rem;
+    }
+
+    .module-item:last-child {
+        border-bottom: none;
+    }
+
+    .module-info {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .module-name {
+        color: #c9d1d9;
+    }
+
+    .module-date {
+        font-size: 0.75rem;
+        color: #8b949e;
+    }
+
+    .btn-action {
+        padding: 4px 10px;
+        background-color: transparent;
+        border: 1px solid #ff00ff;
+        color: #ff00ff;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+        background-color: #ff00ff;
+        color: #0d1117;
+    }
+
+    .security-zone {
+        border: 1px solid #ff7b72;
+        padding: 12px;
+        border-radius: 4px;
+        background-color: rgba(248, 81, 73, 0.05);
+        margin-top: 5px;
+    }
+
+    .security-zone h4 {
+        color: #ff7b72;
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+    }
+
+    .btn-purge {
+        width: 100%;
+        padding: 10px;
+        background-color: transparent;
+        border: 1px solid #ff7b72;
+        color: #ff7b72;
+        cursor: pointer;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-family: inherit;
+        transition: all 0.2s;
+        letter-spacing: 1px;
+    }
+
+    .btn-purge:hover {
+        background-color: #ff7b72;
+        color: #0d1117;
+        box-shadow: 0 0 10px rgba(248, 81, 73, 0.3);
+    }
+
+    .status-panel {
+        font-size: 0.8rem;
+        color: #ffd700;
+        text-align: center;
+        min-height: 15px;
+    }
+    
+    .empty-msg {
+        color: #8b949e;
+        text-align: center;
+        padding: 20px;
+        font-size: 0.85rem;
+    }
+</style>
+
+<div class="module-wrapper">
+    <div class="module-header">
+        <h3>Storage & Lifecycle Manager</h3>
+        <p>Zentrale Datenkontrolle und kryptografischer Shutter-Schutz.</p>
+    </div>
+
+    <div class="storage-meta">
+        <div>Datenbank: <span class="meta-value">ARTE_Core_DB</span></div>
+        <div>Module im Speicher: <span class="meta-value" id="count-display">0</span></div>
+    </div>
+
+    <div class="module-list-container" id="list-container">
+        </div>
+
+    <div class="status-panel" id="status-msg">Bereit. Scanne Speicherzellen...</div>
+
+    <div class="security-zone">
+        <h4>Emergency Anti-Tamper Zone</h4>
+        <button class="btn-purge" id="btn-master-purge">Master Purge (Reset All)</button>
+    </div>
+</div>
+
+<script>
+    // Systemkonfiguration für die IndexedDB
+    const DB_NAME = 'ARTE_Core_DB';
+    const STORE_NAME = 'installed_modules';
+    
+    const listContainer = shadowRoot.getElementById('list-container');
+    const countDisplay = shadowRoot.getElementById('count-display');
+    const statusMsg = shadowRoot.getElementById('status-msg');
+    const btnMasterPurge = shadowRoot.getElementById('btn-master-purge');
+
+    // 1. Asynchroner Datenbank-Schnittstellen-Umgang
+    function openDatabase() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1);
+            
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                }
+            };
+            
+            request.onsuccess = (e) => resolve(e.target.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    // 2. Auslesen und Visualisieren des Langzeitspeichers
+    async function refreshStorageList() {
+        try {
+            const db = await openDatabase();
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                const modules = request.result;
+                listContainer.innerHTML = '';
+                countDisplay.textContent = modules.length;
+
+                if (modules.length === 0) {
+                    listContainer.innerHTML = '<div class="empty-msg">[Keine persistenten Module im Speicher gefunden]</div>';
+                    return;
+                }
+
+                modules.forEach(mod => {
+                    const item = document.createElement('div');
+                    item.className = 'module-item';
+                    
+                    const info = document.createElement('div');
+                    info.className = 'module-info';
+                    
+                    const name = document.createElement('span');
+                    name.className = 'module-name';
+                    name.textContent = mod.title || mod.id;
+                    
+                    const date = document.createElement('span');
+                    date.className = 'module-date';
+                    date.textContent = `Registriert: ${mod.timestamp || 'N/A'}`;
+                    
+                    info.appendChild(name);
+                    info.appendChild(date);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn-action';
+                    deleteBtn.textContent = 'Löschen';
+                    deleteBtn.addEventListener('click', () => deleteSingleModule(mod.id));
+
+                    item.appendChild(info);
+                    item.appendChild(deleteBtn);
+                    listContainer.appendChild(item);
+                });
+            };
+        } catch (err) {
+            statusMsg.textContent = 'Fehler beim Zugriff auf IndexedDB.';
+            statusMsg.style.color = '#ff7b72';
+            console.error('[Storage Error]', err);
+        }
+    }
+
+    // 3. Selektives Löschen einer spezifischen Speicherzelle
+    async function deleteSingleModule(id) {
+        try {
+            const db = await openDatabase();
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            
+            const request = store.delete(id);
+            
+            request.onsuccess = () => {
+                statusMsg.textContent = `Modul ${id} erfolgreich gelöscht.`;
+                statusMsg.style.color = '#00ffcc';
+                refreshStorageList();
+                
+                if (window.osBus) {
+                    window.osBus.emit('log', { msg: `Modul ${id} aus Langzeitspeicher entfernt.` });
+                }
+                setTimeout(() => { statusMsg.textContent = 'Bereit.'; statusMsg.style.color = '#ffd700'; }, 3000);
+            };
+        } catch (err) {
+            statusMsg.textContent = 'Löschvorgang fehlgeschlagen.';
+            statusMsg.style.color = '#ff7b72';
+        }
+    }
+
+    // 4. Kompromissloser Master-Purge (Emergency Shutter)
+    btnMasterPurge.addEventListener('click', () => {
+        const confirmation = confirm("WARNUNG: Dies löscht den gesamten persistenten Langzeitspeicher unwiderruflich. Fortfahren?");
+        if (!confirmation) return;
+
+        statusMsg.textContent = 'Wipe-Sequenz aktiv: Lösche Datenbank...';
+        statusMsg.style.color = '#ff7b72';
+
+        // Schließe alle offenen Verbindungen, indem wir die Datenbank physisch droppen
+        const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+
+        deleteRequest.onsuccess = () => {
+            statusMsg.textContent = 'LANGZEITSPEICHER VOLLSTÄNDIG GELÖSCHT.';
+            statusMsg.style.color = '#ff7b72';
+            countDisplay.textContent = '0';
+            listContainer.innerHTML = '<div class="empty-msg">[System zurückgesetzt - Speicher leer]</div>';
+            
+            if (window.osBus) {
+                window.osBus.emit('log', { msg: 'Kritischer Sicherheits-Purge ausgeführt! Speicher gelöscht.' });
+            }
+        };
+
+        deleteRequest.onerror = (e) => {
+            statusMsg.textContent = 'Fehler beim physischen Löschen der DB.';
+            console.error(e);
+        };
+
+        deleteRequest.onblocked = () => {
+            statusMsg.textContent = 'Purge blockiert! Bitte lade den Tab neu, um den Wipe abzuschließen.';
+            statusMsg.style.color = '#ff7b72';
+        };
+    });
+
+    // Initialisierung beim Laden des Moduls
+    refreshStorageList();
+
+    // Event-Bus Horchposten: Falls ein anderes Modul signalisiert, dass es gespeichert wurde, Liste updaten
+    if (window.osBus) {
+        window.osBus.on('module-saved', () => {
+            refreshStorageList();
+        });
+    }
+</script>

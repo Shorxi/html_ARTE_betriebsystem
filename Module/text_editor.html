@@ -1,0 +1,513 @@
+<style>
+    .module-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        max-height: 850px;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        color: #c9d1d9;
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+    }
+
+    .module-header {
+        border-bottom: 1px solid #30363d;
+        padding: 10px 15px;
+        background-color: #161b22;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .module-header h3 {
+        color: #00ffcc;
+        margin: 0;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    /* Kinetische & Sticky Werkzeugleiste */
+    .toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background-color: #161b22;
+        border-bottom: 1px solid #30363d;
+        padding: 8px 15px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .toolbar-group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        border-right: 1px solid #30363d;
+        padding-right: 8px;
+    }
+
+    .btn-tool {
+        background: transparent;
+        border: 1px solid transparent;
+        color: #c9d1d9;
+        cursor: pointer;
+        padding: 6px 10px;
+        font-size: 0.9rem;
+        border-radius: 3px;
+        transition: all 0.2s;
+        font-weight: bold;
+    }
+
+    .btn-tool:hover { background-color: #30363d; color: #00ffcc; }
+    .btn-tool[data-active="true"] { background-color: rgba(0, 255, 204, 0.1); border-color: #00ffcc; color: #00ffcc; }
+
+    select, input[type="number"], input[type="text"] {
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        padding: 6px;
+        font-size: 0.85rem;
+        border-radius: 3px;
+    }
+
+    select:focus, input:focus { outline: none; border-color: #ff00ff; }
+
+    /* Editor-Raum (Dark Mode Container) */
+    .editor-viewport {
+        flex: 1;
+        overflow-y: auto;
+        padding: 30px 10px;
+        background-color: #05070a;
+        display: flex;
+        justify-content: center;
+    }
+
+    /* Das physische DIN-A4 Blatt (White Mode) */
+    .a4-page {
+        width: 210mm;
+        min-height: 297mm;
+        background-color: #ffffff;
+        color: #000000;
+        /* Standard Word-Ränder (können über Toolbar geändert werden) */
+        padding: 25mm 20mm;
+        box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        outline: none;
+        font-family: 'Arial', sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+    }
+
+    /* Native Formatierungen für kopierte Inhalte */
+    .a4-page table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+    .a4-page table, .a4-page th, .a4-page td { border: 1px solid #333; padding: 8px; }
+    .a4-page th { background-color: #f0f0f0; }
+    
+    /* Image Resizing Container Logik */
+    .a4-page .img-wrapper {
+        display: inline-block;
+        resize: both;
+        overflow: hidden;
+        border: 1px dashed transparent;
+        position: relative;
+        max-width: 100%;
+    }
+    .a4-page .img-wrapper:hover, .a4-page .img-wrapper.active { border-color: #ff00ff; }
+    .a4-page .img-wrapper img { width: 100%; height: 100%; display: block; }
+
+    /* Seitenumbruch-Visualisierung */
+    .a4-page .page-break {
+        width: 100%;
+        height: 2px;
+        margin: 20px 0;
+        background: repeating-linear-gradient(to right, #ff00ff, #ff00ff 10px, transparent 10px, transparent 20px);
+        page-break-after: always;
+        break-after: page;
+        cursor: pointer;
+    }
+
+    /* Footer / I-O Sektor */
+    .io-footer {
+        background-color: #161b22;
+        border-top: 1px solid #30363d;
+        padding: 10px 15px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-io {
+        padding: 8px 15px;
+        background-color: transparent;
+        border: 1px solid #00ffcc;
+        color: #00ffcc;
+        cursor: pointer;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+    }
+    .btn-io:hover { background-color: #00ffcc; color: #0d1117; }
+    .btn-io.export { border-color: #ff00ff; color: #ff00ff; }
+    .btn-io.export:hover { background-color: #ff00ff; color: #0d1117; }
+    .btn-io.doc { border-color: #ffd700; color: #ffd700; }
+    .btn-io.doc:hover { background-color: #ffd700; color: #0d1117; }
+
+    input[type="file"] { display: none; }
+    .status-msg { margin-left: auto; font-size: 0.8rem; color: #ffd700; }
+</style>
+
+<div class="module-wrapper">
+    <div class="module-header">
+        <h3>Advanced Document Synthesis Matrix</h3>
+        <span style="font-size: 0.75rem; color: #8b949e;">WYSIWYG A4-Simulation, Drag&Drop, Multi-Format I/O</span>
+    </div>
+
+    <div class="toolbar" id="doc-toolbar">
+        <div class="toolbar-group">
+            <select id="sel-font" title="Schriftart">
+                <option value="Arial">Arial</option>
+                <option value="'Times New Roman'">Times New Roman</option>
+                <option value="'Courier New'">Courier New</option>
+                <option value="Georgia">Georgia</option>
+            </select>
+            <select id="sel-size" title="Schriftgröße">
+                <option value="1">10px (Mikro)</option>
+                <option value="2">13px (Klein)</option>
+                <option value="3" selected>16px (Standard)</option>
+                <option value="4">18px (Groß)</option>
+                <option value="5">24px (Titel)</option>
+                <option value="6">32px (Header)</option>
+                <option value="7">48px (Maximal)</option>
+            </select>
+        </div>
+        
+        <div class="toolbar-group">
+            <button class="btn-tool" data-cmd="bold" title="Fett"><b>B</b></button>
+            <button class="btn-tool" data-cmd="italic" title="Kursiv"><i>I</i></button>
+            <button class="btn-tool" data-cmd="underline" title="Unterstrichen"><u>U</u></button>
+            <button class="btn-tool" data-cmd="strikeThrough" title="Durchgestrichen"><s>S</s></button>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="btn-tool" data-cmd="justifyLeft" title="Linksbündig">⇤</button>
+            <button class="btn-tool" data-cmd="justifyCenter" title="Zentriert">⇥⇤</button>
+            <button class="btn-tool" data-cmd="justifyRight" title="Rechtsbündig">⇥</button>
+        </div>
+
+        <div class="toolbar-group">
+            <select id="sel-lineheight" title="Zeilenabstand">
+                <option value="1.0">Abstand: 1.0</option>
+                <option value="1.5" selected>Abstand: 1.5</option>
+                <option value="2.0">Abstand: 2.0</option>
+            </select>
+            <button class="btn-tool" id="btn-page-break" title="Erzwingt eine neue A4 Seite im PDF/Druck">✂ Seitenumbruch</button>
+        </div>
+
+        <div class="toolbar-group">
+            <label style="font-size:0.75rem; color:#8b949e;">Ränder (L/R mm):</label>
+            <input type="number" id="inp-margin-lr" value="20" min="0" max="100" style="width: 50px;">
+        </div>
+    </div>
+
+    <div class="editor-viewport" id="viewport">
+        <div class="a4-page" id="document-editor" contenteditable="true" spellcheck="false">
+            <h2>Neues Zieldokument</h2>
+            <p>Beginne hier mit dem Schreiben, ziehe Bilder per <b>Drag & Drop</b> direkt auf das Blatt oder füge kopierte <b>Tabellen</b> ein.</p>
+        </div>
+    </div>
+
+    <div class="io-footer">
+        <input type="file" id="file-import" accept=".txt,.md,.html,.doc,.docx">
+        <button class="btn-io" id="btn-trigger-import">📂 Dokument Laden</button>
+        
+        <div style="border-left: 1px solid #30363d; height: 30px; margin: 0 10px;"></div>
+        
+        <input type="text" id="doc-filename" value="ARTE_Dokument" style="width: 150px;">
+        <select id="doc-format">
+            <option value="pdf">.PDF Format</option>
+            <option value="doc">.DOC (Word)</option>
+            <option value="md">.MD (Markdown)</option>
+            <option value="txt">.TXT (Plain Text)</option>
+        </select>
+        
+        <button class="btn-io export" id="btn-export">Exportieren</button>
+        <div class="status-msg" id="io-status">System betriebsbereit.</div>
+    </div>
+</div>
+
+<script>
+    // Environment Isolation Safety (Funktioniert innerhalb und außerhalb von ShadowDOM)
+    const root = typeof shadowRoot !== 'undefined' ? shadowRoot : document;
+
+    const editor = root.getElementById('document-editor');
+    const toolbar = root.getElementById('doc-toolbar');
+    const ioStatus = root.getElementById('io-status');
+    const marginInput = root.getElementById('inp-margin-lr');
+    const lineheightSelect = root.getElementById('sel-lineheight');
+    const fileImport = root.getElementById('file-import');
+
+    // --- 1. WYSIWYG Editor Core Logik ---
+    
+    // Command Buttons
+    toolbar.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-tool');
+        if (!btn || !btn.dataset.cmd) return;
+        
+        const cmd = btn.dataset.cmd;
+        document.execCommand(cmd, false, null);
+        editor.focus();
+    });
+
+    // Font Family & Size Selectors
+    root.getElementById('sel-font').addEventListener('change', (e) => {
+        document.execCommand('fontName', false, e.target.value);
+        editor.focus();
+    });
+
+    root.getElementById('sel-size').addEventListener('change', (e) => {
+        document.execCommand('fontSize', false, e.target.value);
+        editor.focus();
+    });
+
+    // Zeilenabstand (Line-Height)
+    lineheightSelect.addEventListener('change', (e) => {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            // Umhüllt die aktuelle Auswahl mit einem Span für den Zeilenabstand
+            const span = document.createElement('span');
+            span.style.lineHeight = e.target.value;
+            const range = selection.getRangeAt(0);
+            range.surroundContents(span);
+        } else {
+            editor.style.lineHeight = e.target.value;
+        }
+        editor.focus();
+    });
+
+    // Seitenabstände (Margins)
+    marginInput.addEventListener('input', (e) => {
+        const mm = e.target.value;
+        editor.style.paddingLeft = `${mm}mm`;
+        editor.style.paddingRight = `${mm}mm`;
+    });
+
+    // Manueller Seitenumbruch (Spacer)
+    root.getElementById('btn-page-break').addEventListener('click', () => {
+        const breakNode = document.createElement('div');
+        breakNode.className = 'page-break';
+        breakNode.contentEditable = "false"; // Verhindert reintippen
+        
+        // Fügt einen unsichtbaren Zero-Width-Space dahinter ein, damit man weitertippen kann
+        const zws = document.createTextNode('\u200B'); 
+
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            range.insertNode(zws);
+            range.insertNode(breakNode);
+            range.setStartAfter(zws);
+            range.setEndAfter(zws);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+        editor.focus();
+    });
+
+    // Löschen von Seitenumbrüchen per Klick
+    editor.addEventListener('click', (e) => {
+        if (e.target.classList.contains('page-break')) {
+            e.target.remove();
+        }
+    });
+
+    // --- 2. Kinetische Bild-Injektion (Drag&Drop / Paste mit Resize-Mechanik) ---
+
+    function insertResizableImage(base64Src) {
+        // Erzeugt einen Wrapper, der über CSS (resize: both) skalierbar ist
+        const wrapper = document.createElement('div');
+        wrapper.className = 'img-wrapper';
+        wrapper.contentEditable = "false"; // Wrapper ist nicht editierbar
+        
+        const img = document.createElement('img');
+        img.src = base64Src;
+        
+        wrapper.appendChild(img);
+        
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            range.insertNode(wrapper);
+            // Cursor nach dem Bild platzieren
+            range.setStartAfter(wrapper);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        } else {
+            editor.appendChild(wrapper);
+        }
+    }
+
+    editor.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (const item of items) {
+            if (item.type.indexOf('image') === 0) {
+                e.preventDefault(); 
+                const blob = item.getAsFile();
+                const reader = new FileReader();
+                reader.onload = (event) => insertResizableImage(event.target.result);
+                reader.readAsDataURL(blob);
+            }
+        }
+    });
+
+    editor.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => insertResizableImage(event.target.result);
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    editor.addEventListener('dragover', (e) => e.preventDefault());
+
+    // --- 3. Multi-Format Import / I-O Relais ---
+
+    root.getElementById('btn-trigger-import').addEventListener('click', () => fileImport.click());
+
+    fileImport.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        ioStatus.textContent = "Lade Dokument...";
+        const reader = new FileReader();
+        
+        reader.onload = (event) => {
+            const content = event.target.result;
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            if (ext === 'html') {
+                editor.innerHTML = content;
+            } else if (ext === 'md') {
+                // Simpler MD to HTML Converter für Basics
+                let html = content
+                    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                    .replace(/\*\*(.*?)\*\*/gim, '<b>$1</b>')
+                    .replace(/\*(.*?)\*/gim, '<i>$1</i>')
+                    .replace(/\n/gim, '<br>');
+                editor.innerHTML = html;
+            } else {
+                // txt oder unformatiertes Doc
+                editor.innerText = content; 
+            }
+            
+            ioStatus.textContent = `Dokument '${file.name}' geladen.`;
+            ioStatus.style.color = "#00ffcc";
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    });
+
+    // --- 4. Asynchrone Export Engine (PDF, DOC, MD, TXT) ---
+
+    function downloadBlob(content, filename, contentType) {
+        const blob = new Blob([content], { type: contentType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    root.getElementById('btn-export').addEventListener('click', () => {
+        const filename = root.getElementById('doc-filename').value || 'ARTE_Dokument';
+        const format = root.getElementById('doc-format').value;
+        
+        ioStatus.textContent = `Bereite ${format.toUpperCase()}-Export vor...`;
+        ioStatus.style.color = "#ffd700";
+
+        if (format === 'txt') {
+            downloadBlob(editor.innerText, `${filename}.txt`, 'text/plain');
+            ioStatus.textContent = "Export abgeschlossen.";
+        } 
+        else if (format === 'md') {
+            // Rudimentäre HTML zu MD Übersetzung
+            let md = editor.innerHTML
+                .replace(/<h1>(.*?)<\/h1>/gi, '# $1\n')
+                .replace(/<h2>(.*?)<\/h2>/gi, '## $1\n')
+                .replace(/<h3>(.*?)<\/h3>/gi, '### $1\n')
+                .replace(/<b>(.*?)<\/b>|<strong>(.*?)<\/strong>/gi, '**$1**')
+                .replace(/<i>(.*?)<\/i>|<em>(.*?)<\/em>/gi, '*$1*')
+                .replace(/<br\s*[\/]?>/gi, '\n')
+                .replace(/<p>(.*?)<\/p>/gi, '$1\n\n')
+                .replace(/<[^>]+>/g, ''); // Strip remaining HTML
+            downloadBlob(md, `${filename}.md`, 'text/markdown');
+            ioStatus.textContent = "Export abgeschlossen.";
+        }
+        else if (format === 'doc') {
+            // Natives MS Word HTML Wrapper Format (Bypasses externe DOCX Libs)
+            const preHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head><meta charset='utf-8'><title>Export HTML to Word</title>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                table { border-collapse: collapse; width: 100%; }
+                td, th { border: 1px solid black; padding: 5px; }
+            </style>
+            </head><body>`;
+            const postHtml = "</body></html>";
+            const htmlData = preHtml + editor.innerHTML + postHtml;
+            downloadBlob(htmlData, `${filename}.doc`, 'application/vnd.ms-word;charset=utf-8');
+            ioStatus.textContent = "Export abgeschlossen.";
+        }
+        else if (format === 'pdf') {
+            // Isolierte High-Fidelity PDF Generierung via Browser Print-Engine
+            const printWindow = window.open('', '_blank');
+            const sheetContent = editor.innerHTML;
+            const currentPadding = editor.style.paddingLeft || '20mm';
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${filename}</title>
+                    <style>
+                        @page { size: A4; margin: 0; }
+                        body {
+                            background-color: #ffffff;
+                            color: #000000;
+                            font-family: 'Arial', sans-serif;
+                            font-size: 16px;
+                            line-height: 1.5;
+                            padding: 25mm ${currentPadding};
+                        }
+                        table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+                        th, td { border: 1px solid #000; padding: 8px; }
+                        img { max-width: 100%; height: auto; }
+                        .img-wrapper { display: inline-block; max-width: 100%; border: none; }
+                        .page-break { break-after: page; page-break-after: always; border: none; height: 0; background: none; }
+                    </style>
+                </head>
+                <body>
+                    ${sheetContent}
+                    <script>
+                        window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            ioStatus.textContent = "PDF-Drucker-Spooling initiiert.";
+        }
+        
+        ioStatus.style.color = "#00ffcc";
+        setTimeout(() => ioStatus.textContent = "System betriebsbereit.", 3000);
+    });
+</script>

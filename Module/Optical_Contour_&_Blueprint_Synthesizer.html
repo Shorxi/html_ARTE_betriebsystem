@@ -1,0 +1,499 @@
+<style>
+    .module-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        max-height: 850px;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        color: #c9d1d9;
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        position: relative;
+    }
+
+    .module-header {
+        border-bottom: 1px solid #30363d;
+        padding: 10px 15px;
+        background-color: #161b22;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .module-header h3 {
+        color: #00ffcc;
+        margin: 0;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    .editor-matrix {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    @media (max-width: 1024px) {
+        .editor-matrix { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    }
+
+    /* LINKER SEKTOR: Steuerung & I/O */
+    .control-pane {
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #30363d;
+        background-color: #0d1117;
+        padding: 20px;
+        gap: 20px;
+        overflow-y: auto;
+    }
+
+    .pane-title {
+        font-size: 0.85rem;
+        color: #ffd700;
+        text-transform: uppercase;
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 5px;
+    }
+
+    /* Drag & Drop Zone */
+    .drop-zone {
+        border: 2px dashed #30363d;
+        border-radius: 8px;
+        padding: 40px 20px;
+        text-align: center;
+        background-color: #161b22;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 150px;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+        border-color: #00ffcc;
+        background-color: rgba(0, 255, 204, 0.05);
+    }
+
+    .drop-zone p { margin: 0; color: #8b949e; font-size: 0.9rem; }
+    .drop-zone span { color: #00ffcc; font-weight: bold; text-transform: uppercase; font-size: 0.8rem; }
+
+    /* Slider Steuerung */
+    .slider-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .slider-group label {
+        font-size: 0.8rem;
+        color: #8b949e;
+        text-transform: uppercase;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    input[type="range"] {
+        width: 100%;
+        accent-color: #00ffcc;
+        cursor: pointer;
+    }
+
+    /* Buttons */
+    .btn-action {
+        padding: 12px 15px;
+        background-color: transparent;
+        border: 1px solid #00ffcc;
+        color: #00ffcc;
+        cursor: pointer;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+        text-align: center;
+        width: 100%;
+    }
+
+    .btn-action:hover { background-color: #00ffcc; color: #0d1117; }
+    .btn-action:disabled { border-color: #30363d; color: #30363d; cursor: not-allowed; background-color: transparent; }
+
+    .btn-action.export { border-color: #ff00ff; color: #ff00ff; }
+    .btn-action.export:hover:not(:disabled) { background-color: #ff00ff; color: #0d1117; }
+
+    .export-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    /* RECHTER SEKTOR: Preview Viewport */
+    .preview-pane {
+        display: flex;
+        flex-direction: column;
+        background-color: #ffffff; /* Weiß, um die Bleistiftskizze optimal zu zeigen */
+        position: relative;
+    }
+
+    /* Fullscreen Modus Isolation */
+    .preview-pane.fs-active {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 9999;
+        background-color: #ffffff;
+    }
+
+    #btn-close-fs {
+        display: none;
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #161b22;
+        color: #ff7b72;
+        border: 2px solid #ff7b72;
+        padding: 10px 30px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 10000;
+        border-radius: 4px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        transition: all 0.2s;
+    }
+
+    #btn-close-fs:hover { background-color: #ff7b72; color: #0d1117; }
+    .preview-pane.fs-active #btn-close-fs { display: block; }
+
+    .preview-header {
+        background-color: #f0f0f0;
+        color: #333;
+        padding: 5px 15px;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        border-bottom: 1px solid #ccc;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .preview-pane.fs-active .preview-header { display: none; }
+
+    .canvas-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        padding: 20px;
+    }
+
+    canvas {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    }
+
+    input[type="file"] { display: none; }
+    .status-hud { font-size: 0.8rem; color: #8b949e; text-align: center; margin-top: 10px; }
+    
+    .loader {
+        display: none;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #ff00ff;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        position: absolute;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+
+<div class="module-wrapper">
+    <div class="module-header">
+        <h3>Optical Contour & Blueprint Synthesizer</h3>
+        <span style="font-size: 0.75rem; color: #8b949e;">Local Pixel Edge-Detection, Drag&Drop, Isolated Fullscreen</span>
+    </div>
+
+    <div class="editor-matrix">
+        <div class="control-pane">
+            <div class="pane-title">📥 Input & Parameter</div>
+            
+            <input type="file" id="image-upload" accept="image/png, image/jpeg, image/webp">
+            <div class="drop-zone" id="drop-zone">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                <p>Bild hierher ziehen (Drag & Drop)</p>
+                <span>ODER KLICKEN ZUM HOCHLADEN</span>
+            </div>
+
+            <div class="slider-group">
+                <label>
+                    Konturen-Sensibilität
+                    <span id="val-sensitivity" style="color:#00ffcc;">50</span>
+                </label>
+                <input type="range" id="slider-sensitivity" min="10" max="150" value="50">
+            </div>
+
+            <div class="slider-group">
+                <label>
+                    Hintergrund-Invertierung
+                    <span id="val-invert" style="color:#00ffcc;">Skizze</span>
+                </label>
+                <input type="range" id="slider-invert" min="0" max="1" value="1" step="1">
+            </div>
+
+            <div style="flex: 1;"></div>
+
+            <div class="pane-title">💾 Format Export</div>
+            <div class="export-grid">
+                <button class="btn-action export" id="btn-export-png" disabled>.PNG Speichern</button>
+                <button class="btn-action export" id="btn-export-jpg" disabled>.JPG Speichern</button>
+            </div>
+            <div class="status-hud" id="hud-status">Warte auf Bilddaten...</div>
+        </div>
+
+        <div class="preview-pane" id="preview-pane">
+            <button id="btn-close-fs">X Schließen</button>
+            <div class="preview-header" id="preview-header">
+                <span>👁️ Blueprint Matrix</span>
+                <span style="color: #ff00ff; font-weight: bold;">DOPPELKLICK FÜR VOLLBILD</span>
+            </div>
+            <div class="canvas-container" id="canvas-container" title="Doppelklick zum Vergrößern">
+                <div class="loader" id="loader"></div>
+                <canvas id="render-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const root = typeof shadowRoot !== 'undefined' ? shadowRoot : document;
+
+    const dropZone = root.getElementById('drop-zone');
+    const fileInput = root.getElementById('image-upload');
+    const sliderSensitivity = root.getElementById('slider-sensitivity');
+    const valSensitivity = root.getElementById('val-sensitivity');
+    const sliderInvert = root.getElementById('slider-invert');
+    const valInvert = root.getElementById('val-invert');
+    
+    const canvas = root.getElementById('render-canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    
+    const btnExportPng = root.getElementById('btn-export-png');
+    const btnExportJpg = root.getElementById('btn-export-jpg');
+    const hudStatus = root.getElementById('hud-status');
+    const loader = root.getElementById('loader');
+
+    const previewPane = root.getElementById('preview-pane');
+    const canvasContainer = root.getElementById('canvas-container');
+    const btnCloseFs = root.getElementById('btn-close-fs');
+    const previewHeader = root.getElementById('preview-header');
+
+    let currentImage = null;
+    let originalFilename = "ARTE_Blueprint";
+
+    // --- 1. Bild I/O Handling (Drag & Drop / Upload) ---
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        let dt = e.dataTransfer;
+        let files = dt.files;
+        if (files.length > 0) handleFile(files[0]);
+    });
+
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) handleFile(this.files[0]);
+    });
+
+    function handleFile(file) {
+        if (!file.type.startsWith('image/')) {
+            hudStatus.textContent = "Fehler: Nur Bildformate erlaubt.";
+            return;
+        }
+        originalFilename = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        hudStatus.textContent = "Lese Bilddaten...";
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                currentImage = img;
+                processImage();
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // --- 2. Mathematische Pixel-Synthese (Sobel Edge Detection) ---
+    function processImage() {
+        if (!currentImage) return;
+        
+        loader.style.display = "block";
+        hudStatus.textContent = "Synthetisiere Konturen...";
+
+        // setTimeout allows UI to update the loader before heavy JS computation freezes the thread
+        setTimeout(() => {
+            // Um Speicher-Erschöpfung zu vermeiden, skalieren wir riesige Bilder intern
+            const MAX_WIDTH = 2500;
+            let width = currentImage.width;
+            let height = currentImage.height;
+
+            if (width > MAX_WIDTH) {
+                height = Math.round(height * (MAX_WIDTH / width));
+                width = MAX_WIDTH;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // Zeichne Originalbild
+            ctx.drawImage(currentImage, 0, 0, width, height);
+
+            const sensitivity = parseInt(sliderSensitivity.value);
+            const invertMode = parseInt(sliderInvert.value) === 1;
+
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+            const tempData = new Uint8ClampedArray(data.length);
+
+            // 1. Grayscale Konvertierung
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+                tempData[i] = tempData[i+1] = tempData[i+2] = gray;
+                tempData[i+3] = 255;
+            }
+
+            // 2. Sobel Operator Matrix (Kantenerkennung)
+            const kernelX = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
+            const kernelY = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
+            
+            const w = width;
+
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    let px = 0;
+                    let py = 0;
+
+                    // Faltung (Convolution)
+                    for (let sy = -1; sy <= 1; sy++) {
+                        for (let sx = -1; sx <= 1; sx++) {
+                            const offset = ((y + sy) * w + (x + sx)) * 4;
+                            const weightX = kernelX[(sy + 1) * 3 + (sx + 1)];
+                            const weightY = kernelY[(sy + 1) * 3 + (sx + 1)];
+                            const val = tempData[offset];
+                            
+                            px += val * weightX;
+                            py += val * weightY;
+                        }
+                    }
+
+                    // Magnitude berechnen und Sensibilität anwenden
+                    let magnitude = Math.sqrt(px * px + py * py) * (sensitivity / 50);
+                    
+                    // Invertierung für "Bleistift-Skizze" (Schwarze Linien auf Weiß)
+                    if (invertMode) {
+                        magnitude = 255 - magnitude;
+                        if (magnitude < 0) magnitude = 0;
+                    } else {
+                        if (magnitude > 255) magnitude = 255;
+                    }
+
+                    const idx = (y * w + x) * 4;
+                    data[idx] = magnitude;       // R
+                    data[idx + 1] = magnitude;   // G
+                    data[idx + 2] = magnitude;   // B
+                    data[idx + 3] = 255;         // A
+                }
+            }
+
+            // Zurück auf den Canvas schreiben
+            ctx.putImageData(imgData, 0, 0);
+            
+            loader.style.display = "none";
+            hudStatus.textContent = "Blueprint-Synthese abgeschlossen.";
+            hudStatus.style.color = "#00ffcc";
+            
+            btnExportPng.disabled = false;
+            btnExportJpg.disabled = false;
+
+        }, 50);
+    }
+
+    // --- 3. Slider Live-Updates ---
+    sliderSensitivity.addEventListener('input', (e) => {
+        valSensitivity.textContent = e.target.value;
+    });
+    sliderSensitivity.addEventListener('change', processImage);
+
+    sliderInvert.addEventListener('input', (e) => {
+        valInvert.textContent = parseInt(e.target.value) === 1 ? "Skizze" : "Neon";
+    });
+    sliderInvert.addEventListener('change', () => {
+        // Ändert die Hintergrundfarbe des Viewports dynamisch
+        previewPane.style.backgroundColor = parseInt(sliderInvert.value) === 1 ? "#ffffff" : "#05070a";
+        processImage();
+    });
+
+    // --- 4. Isolierter Fullscreen Modus ---
+    canvasContainer.addEventListener('dblclick', () => {
+        if (!currentImage) return;
+        previewPane.classList.add('fs-active');
+        previewHeader.style.display = 'none';
+    });
+
+    btnCloseFs.addEventListener('click', () => {
+        previewPane.classList.remove('fs-active');
+        previewHeader.style.display = 'flex';
+    });
+
+    // --- 5. Format Export ---
+    function triggerDownload(format, mimeType) {
+        if (!currentImage) return;
+        const dataUrl = canvas.toDataURL(mimeType, 0.95);
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `${originalFilename}_blueprint.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        if (window.osBus) window.osBus.emit('log', { msg: `Blueprint als ${format.toUpperCase()} exportiert.` });
+    }
+
+    btnExportPng.addEventListener('click', () => triggerDownload('png', 'image/png'));
+    btnExportJpg.addEventListener('click', () => triggerDownload('jpg', 'image/jpeg'));
+
+</script>

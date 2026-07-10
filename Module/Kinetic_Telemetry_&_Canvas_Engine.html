@@ -1,0 +1,384 @@
+<!-- 
+Lead Architect: Emanuel Schaaf
+Open Origin Architecture
+Project: A.R.T.E. Module - Kinetic Telemetry & Canvas Engine
+-->
+<style>
+    .module-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        height: 100%;
+        font-family: 'Courier New', Courier, monospace;
+        color: #c9d1d9;
+    }
+
+    .module-header {
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 8px;
+    }
+
+    .module-header h3 {
+        color: #00ffcc;
+        margin: 0 0 5px 0;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .module-header p {
+        font-size: 0.8rem;
+        color: #8b949e;
+        margin: 0;
+    }
+
+    /* Das "Oszilloskop" */
+    .canvas-container {
+        width: 100%;
+        background-color: #05070a;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+    }
+
+    canvas {
+        display: block;
+        width: 100%;
+        height: 350px;
+    }
+
+    /* Steuerungselemente */
+    .telemetry-controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        background-color: #161b22;
+        padding: 15px;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+    }
+
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    label {
+        font-size: 0.8rem;
+        color: #ffd700;
+        text-transform: uppercase;
+    }
+
+    select, input[type="text"] {
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        padding: 8px;
+        font-family: inherit;
+        font-size: 0.85rem;
+    }
+
+    select:focus, input[type="text"]:focus {
+        outline: none;
+        border-color: #ff00ff;
+    }
+
+    .btn-action {
+        padding: 8px;
+        background-color: transparent;
+        border: 1px solid #00ffcc;
+        color: #00ffcc;
+        cursor: pointer;
+        font-weight: bold;
+        text-transform: uppercase;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+
+    .btn-action:hover {
+        background-color: #00ffcc;
+        color: #0d1117;
+    }
+
+    .btn-action.halt {
+        border-color: #ff7b72;
+        color: #ff7b72;
+    }
+
+    .btn-action.halt:hover {
+        background-color: #ff7b72;
+        color: #0d1117;
+    }
+
+    /* Telemetrie-Werte HUD */
+    .hud-overlay {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(13, 17, 23, 0.8);
+        border: 1px solid #30363d;
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        pointer-events: none;
+    }
+
+    .hud-val { color: #00ffcc; font-weight: bold; }
+    .hud-peak { color: #ff00ff; font-weight: bold; }
+
+</style>
+
+<div class="module-wrapper">
+    <div class="module-header">
+        <h3>Kinetic Telemetry Engine</h3>
+        <p>Native GPU-beschleunigte HTML5 Canvas Datenvisualisierung.</p>
+    </div>
+
+    <div class="canvas-container">
+        <!-- Native Zeichenfläche (Auflösung wird durch JS an Container angepasst) -->
+        <canvas id="telemetry-canvas"></canvas>
+        <div class="hud-overlay">
+            <div>CURR: <span class="hud-val" id="hud-current">0.00</span></div>
+            <div>PEAK: <span class="hud-peak" id="hud-peak">0.00</span></div>
+            <div>FPS:  <span class="hud-val" id="hud-fps">0</span></div>
+        </div>
+    </div>
+
+    <div class="telemetry-controls">
+        <div class="control-group">
+            <label>Datenquelle (Stream)</label>
+            <select id="data-source">
+                <option value="sine">Resonanz-Welle (Sinus)</option>
+                <option value="noise">Stochastisches Rauschen</option>
+                <option value="pulse">Elektrokardiogramm (Puls)</option>
+            </select>
+            <button class="btn-action" id="btn-toggle">Stream Pausieren</button>
+        </div>
+
+        <div class="control-group">
+            <label>Geschwindigkeit (Takt)</label>
+            <input type="range" id="speed-slider" min="1" max="20" value="5">
+            <label>Amplitude (Gain)</label>
+            <input type="range" id="gain-slider" min="10" max="200" value="80">
+        </div>
+
+        <div class="control-group">
+            <label>Statischer CSV Input</label>
+            <input type="text" id="csv-input" placeholder="z.B. 10,40,20,80,30,90,10">
+            <button class="btn-action" id="btn-plot-csv" style="border-color: #ff00ff; color: #ff00ff;">CSV Plotten</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Systemreferenzen & Initialisierung ---
+    const canvas = shadowRoot.getElementById('telemetry-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const dataSource = shadowRoot.getElementById('data-source');
+    const speedSlider = shadowRoot.getElementById('speed-slider');
+    const gainSlider = shadowRoot.getElementById('gain-slider');
+    const btnToggle = shadowRoot.getElementById('btn-toggle');
+    const csvInput = shadowRoot.getElementById('csv-input');
+    const btnPlotCsv = shadowRoot.getElementById('btn-plot-csv');
+
+    const hudCurrent = shadowRoot.getElementById('hud-current');
+    const hudPeak = shadowRoot.getElementById('hud-peak');
+    const hudFps = shadowRoot.getElementById('hud-fps');
+
+    // Dynamische Anpassung der Canvas-Auflösung an den tatsächlichen Bildschirm-Pixel-Raum
+    function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    // Erster Aufruf leicht verzögert, um sicherzustellen, dass der Container gerendert wurde
+    setTimeout(resizeCanvas, 100);
+
+    // --- Core Engine Variablen ---
+    let dataBuffer = [];
+    const MAX_POINTS = 300; // Anzahl der Datenpunkte auf der X-Achse
+    
+    let isRunning = true;
+    let animationId = null;
+    let timeStep = 0;
+    
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+    let fps = 0;
+
+    // Buffer initialisieren (mit Nullen füllen)
+    for(let i = 0; i < MAX_POINTS; i++) dataBuffer.push(0);
+
+    // --- Mathematik & Signal-Synthese ---
+    function generateNextValue() {
+        const type = dataSource.value;
+        const speed = parseFloat(speedSlider.value) / 100;
+        const gain = parseFloat(gainSlider.value);
+        
+        timeStep += speed;
+
+        if (type === 'sine') {
+            // Kombinierte Sinuswellen für komplexere Resonanz
+            return Math.sin(timeStep) * (gain * 0.7) + Math.cos(timeStep * 2.5) * (gain * 0.3);
+        } else if (type === 'noise') {
+            // Geglättetes Zufallsrauschen (Brownian Motion ähnlich)
+            const randomDelta = (Math.random() - 0.5) * (gain * 0.5);
+            let nextVal = dataBuffer[dataBuffer.length - 1] + randomDelta;
+            // Dämpfung, damit es nicht ins Unendliche abhaut
+            if (nextVal > gain) nextVal -= Math.abs(randomDelta) * 2;
+            if (nextVal < -gain) nextVal += Math.abs(randomDelta) * 2;
+            return nextVal;
+        } else if (type === 'pulse') {
+            // EKG-ähnlicher Spike
+            if (Math.random() > 0.95) return gain;
+            if (Math.random() > 0.9) return -gain * 0.5;
+            return (Math.random() - 0.5) * (gain * 0.05);
+        }
+        return 0;
+    }
+
+    // --- Renderer (Die Grafik-Pipeline) ---
+    function renderFrame() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const centerY = h / 2;
+
+        // 1. Bildschirm leeren (Kathodenstrahlröhre löschen)
+        ctx.clearRect(0, 0, w, h);
+
+        // 2. Hintergrund-Raster (Grid) zeichnen
+        ctx.strokeStyle = '#161b22';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for(let x = 0; x < w; x += 50) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+        for(let y = 0; y < h; y += 50) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+        ctx.stroke();
+
+        // 3. Mittlere Nulllinie (X-Achse)
+        ctx.strokeStyle = '#30363d';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+        ctx.lineTo(w, centerY);
+        ctx.stroke();
+
+        // 4. Daten-Kurve plotten
+        ctx.strokeStyle = '#00ffcc'; // Cyan als primäre Datenfarbe
+        ctx.lineWidth = 2;
+        ctx.lineJoin = 'round';
+        
+        ctx.beginPath();
+        const stepX = w / (MAX_POINTS - 1);
+        
+        let currentPeak = 0;
+
+        for (let i = 0; i < MAX_POINTS; i++) {
+            const val = dataBuffer[i];
+            const x = i * stepX;
+            const y = centerY - val; // Minus, da Canvas Y von oben nach unten wächst
+            
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+
+            // Statistik berechnen
+            if (Math.abs(val) > currentPeak) currentPeak = Math.abs(val);
+        }
+        ctx.stroke();
+
+        // Glüheffekt (Bloom) für die Linie
+        ctx.strokeStyle = 'rgba(0, 255, 204, 0.3)';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+
+        // 5. HUD Updates
+        const latestVal = dataBuffer[dataBuffer.length - 1];
+        hudCurrent.textContent = latestVal.toFixed(2);
+        hudPeak.textContent = currentPeak.toFixed(2);
+        
+        // Farbe anpassen bei Extremwerten
+        if (Math.abs(latestVal) > parseFloat(gainSlider.value) * 0.9) {
+            hudCurrent.style.color = '#ff7b72'; // Rot bei Clipping
+        } else {
+            hudCurrent.style.color = '#00ffcc';
+        }
+
+        // FPS Berechnung
+        const now = performance.now();
+        frameCount++;
+        if (now - lastFrameTime >= 1000) {
+            hudFps.textContent = frameCount;
+            frameCount = 0;
+            lastFrameTime = now;
+        }
+    }
+
+    // --- Main Game/Engine Loop ---
+    function engineLoop() {
+        if (isRunning) {
+            // Buffer verschieben (FIFO)
+            dataBuffer.shift();
+            // Neuen Wert berechnen und einreihen
+            dataBuffer.push(generateNextValue());
+        }
+        
+        renderFrame();
+        
+        // Loop aufrechterhalten
+        animationId = requestAnimationFrame(engineLoop);
+    }
+
+    // --- Steuerungs-Logik ---
+    btnToggle.addEventListener('click', () => {
+        isRunning = !isRunning;
+        if (isRunning) {
+            btnToggle.textContent = 'Stream Pausieren';
+            btnToggle.classList.remove('halt');
+        } else {
+            btnToggle.textContent = 'Stream Fortsetzen';
+            btnToggle.classList.add('halt');
+        }
+    });
+
+    btnPlotCsv.addEventListener('click', () => {
+        const raw = csvInput.value;
+        if (!raw) return;
+        
+        // Parse CSV to Array of Numbers
+        const values = raw.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+        if (values.length === 0) return;
+
+        // Auto-Scale Gain an den höchsten CSV Wert anpassen
+        const maxVal = Math.max(...values.map(Math.abs));
+        gainSlider.value = maxVal > 0 ? maxVal * 1.2 : 100;
+
+        // Stream stoppen für statische Analyse
+        isRunning = false;
+        btnToggle.textContent = 'Stream Fortsetzen';
+        btnToggle.classList.add('halt');
+
+        // Buffer leeren und mit CSV füllen (ggf. strecken)
+        dataBuffer.fill(0);
+        const startIndex = MAX_POINTS - values.length;
+        
+        for (let i = 0; i < values.length; i++) {
+            if (startIndex + i >= 0 && startIndex + i < MAX_POINTS) {
+                dataBuffer[startIndex + i] = values[i];
+            }
+        }
+        // Einen Frame manuell rendern, um die neuen Daten zu zeigen
+        renderFrame();
+    });
+
+    // Resize Event abfangen für saubere Darstellung
+    new ResizeObserver(() => {
+        resizeCanvas();
+        if (!isRunning) renderFrame(); // Neu zeichnen, auch wenn pausiert
+    }).observe(canvas.parentElement);
+
+    // Engine starten
+    engineLoop();
+</script>
