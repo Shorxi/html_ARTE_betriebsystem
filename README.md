@@ -42,6 +42,8 @@ Isolierte, hochspezialisierte Werkzeuge, die nativ im OS-Container oder als Stan
 ### 3. 🖼️ Bilder & Dokumentation (`/Bilder`)
 Enthält Architektur-Skizzen, UI-Snapshots und visuelle Referenzen der Engine im Live-Betrieb. *(Siehe Ordner für Details)*
 
+### Live Demo
+*   [`> Demo <`](https://arte.site.je/?i=1)
 ---
 
 ## 🛠️ Systemstart (Quickstart)
