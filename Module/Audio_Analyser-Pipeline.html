@@ -215,10 +215,11 @@
 
 <div class="module-wrapper">
     <div class="module-header">
-        <h3>Acoustic Resonance Engine V2.4</h3>
+        <h3>Acoustic Resonance Engine V2.5</h3>
         <span style="font-size: 0.75rem; color: #8b949e;">Adaptive Resolution Core & Hardware Linear Gain Control</span>
     </div>
 
+    <!-- Originaler Fehlercode mit crossorigin ist hier wieder drin -->
     <audio id="audio-player" crossorigin="anonymous" style="display: none;"></audio>
 
     <div class="vis-container" id="vis-container" title="Doppelklick für Vollbild">
@@ -234,6 +235,9 @@
                     <option value="bars">Cyberpunk Matrix (Symmetrische Balken)</option>
                     <option value="orbit" selected>Orbit Resonance (Kreis-Mandala)</option>
                     <option value="nebula">Kinetic Particle Nebula (Teilchenfeld)</option>
+                    <option value="wave">Quantum Wave (Frequenz-Oszillator)</option>
+                    <option value="blocks">Retro LED Matrix (Block-Equalizer)</option>
+                    <option value="nova">Supernova (Radiale Spektren)</option>
                 </select>
             </div>
 
@@ -289,6 +293,7 @@
 </div>
 
 <script>
+    // Originale "Fehler"-Architektur (shadowRoot hart verlinkt)
     const container = shadowRoot.getElementById('vis-container');
     const canvas = shadowRoot.getElementById('vis-canvas');
     const ctx = canvas.getContext('2d');
@@ -331,10 +336,8 @@
     }
     let peaks = [];
 
-    // System-Voreinstellung Pegelverstärkung
     audioPlayer.volume = parseFloat(sliderVolume.value);
 
-    // Adaptive Resolution Handler
     const resizeObserver = new ResizeObserver(entries => {
         for (let entry of entries) {
             canvas.width = entry.contentRect.width;
@@ -343,14 +346,12 @@
     });
     resizeObserver.observe(container);
 
-    // V2.4 Lautstärken-Schnittstelle
     sliderVolume.addEventListener('input', (e) => {
         const vol = parseFloat(e.target.value);
         audioPlayer.volume = vol;
         valVolume.textContent = Math.round(vol * 100) + '%';
     });
 
-    // V2.4 Sensitivitäts-Anzeige-Schnittstelle
     sliderGain.addEventListener('input', (e) => {
         valGain.textContent = parseFloat(e.target.value).toFixed(1) + 'x';
     });
@@ -648,6 +649,102 @@
                     }
                 }
             });
+        }
+        else if (currentStyle === 'wave') {
+            const sliceWidth = w / bufferLength;
+            let x = 0;
+
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#00ffcc';
+            ctx.fillStyle = 'rgba(0, 255, 204, 0.15)';
+            ctx.beginPath();
+            ctx.moveTo(0, h);
+
+            for (let i = 0; i < bufferLength; i++) {
+                const v = (dataArray[i] / 255.0) * gain;
+                const y = h - (v * h * 0.7);
+
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+
+                x += sliceWidth;
+            }
+            ctx.lineTo(w, h);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Zweite, versetzte Neon-Welle (Magenta)
+            x = 0;
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ff00ff';
+            ctx.beginPath();
+            for (let i = 0; i < bufferLength; i++) {
+                const v = (dataArray[i] / 255.0) * gain;
+                const y = h - (v * h * 0.4); 
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                x += sliceWidth;
+            }
+            ctx.stroke();
+        }
+        else if (currentStyle === 'blocks') {
+            const barWidth = (w / bufferLength) * 2.5;
+            const blockHeight = 5;
+            const blockSpacing = 2;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i += 2) { 
+                let val = dataArray[i] * gain;
+                let numBlocks = Math.floor((val / 255) * (h / (blockHeight + blockSpacing)) * 0.9);
+
+                for (let j = 0; j < numBlocks; j++) {
+                    let y = h - (j * (blockHeight + blockSpacing)) - blockHeight;
+                    let ratio = j / (h / (blockHeight + blockSpacing));
+                    
+                    // Farbverlauf von Cyan zu Magenta
+                    ctx.fillStyle = `rgb(${Math.floor(ratio * 255)}, ${Math.floor((1 - ratio) * 255)}, 204)`;
+                    ctx.fillRect(x, y, barWidth - 2, blockHeight);
+                }
+                x += barWidth;
+            }
+        }
+        else if (currentStyle === 'nova') {
+            let bassSum = 0;
+            for (let i = 0; i < 15; i++) bassSum += dataArray[i];
+            const baseRadius = 40 + (bassSum / 15) * gain * 0.3;
+
+            // Pulsierender Kern
+            ctx.fillStyle = `rgba(255, 0, 255, ${Math.min(1, (bassSum/15)*gain/255)})`;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, baseRadius * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            for (let i = 0; i < bufferLength; i += 3) {
+                const angle = (i / bufferLength) * Math.PI * 2 + (Date.now() * 0.0003);
+                const val = dataArray[i] * gain * 1.2;
+                const length = baseRadius + val;
+
+                const startX = centerX + Math.cos(angle) * baseRadius;
+                const startY = centerY + Math.sin(angle) * baseRadius;
+                const endX = centerX + Math.cos(angle) * length;
+                const endY = centerY + Math.sin(angle) * length;
+
+                ctx.strokeStyle = i % 2 === 0 ? '#00ffcc' : '#ff00ff';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+
+                // Energie-Partikel an den Spitzen
+                if (val > 40) {
+                    ctx.fillStyle = '#ffd700';
+                    ctx.beginPath();
+                    ctx.arc(endX, endY, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
         }
     }
     renderPipeline();
