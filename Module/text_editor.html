@@ -77,6 +77,19 @@
 
     select:focus, input:focus { outline: none; border-color: #ff00ff; }
 
+    /* Neue Color-Picker Styles */
+    .color-picker {
+        padding: 0;
+        width: 26px;
+        height: 26px;
+        border: 1px solid #30363d;
+        border-radius: 3px;
+        cursor: pointer;
+        background: transparent;
+    }
+    .color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+    .color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
+
     /* Editor-Raum (Dark Mode Container) */
     .editor-viewport {
         flex: 1;
@@ -85,29 +98,29 @@
         background-color: #05070a;
         display: flex;
         justify-content: center;
+        align-items: flex-start; 
     }
 
-    /* Das physische DIN-A4 Blatt (White Mode) */
+    /* Das physische DIN-A4 Blatt (Endlos-Papier Modus) */
     .a4-page {
         width: 210mm;
         min-height: 297mm;
+        height: fit-content; 
         background-color: #ffffff;
         color: #000000;
-        /* Standard Word-Ränder (können über Toolbar geändert werden) */
         padding: 25mm 20mm;
         box-shadow: 0 0 20px rgba(0,0,0,0.8);
         outline: none;
         font-family: 'Arial', sans-serif;
         font-size: 16px;
         line-height: 1.5;
+        overflow-wrap: break-word;
     }
 
-    /* Native Formatierungen für kopierte Inhalte */
     .a4-page table { border-collapse: collapse; width: 100%; margin: 15px 0; }
     .a4-page table, .a4-page th, .a4-page td { border: 1px solid #333; padding: 8px; }
     .a4-page th { background-color: #f0f0f0; }
     
-    /* Image Resizing Container Logik */
     .a4-page .img-wrapper {
         display: inline-block;
         resize: both;
@@ -119,12 +132,12 @@
     .a4-page .img-wrapper:hover, .a4-page .img-wrapper.active { border-color: #ff00ff; }
     .a4-page .img-wrapper img { width: 100%; height: 100%; display: block; }
 
-    /* Seitenumbruch-Visualisierung */
-    .a4-page .page-break {
+    .a4-page hr.page-break {
         width: 100%;
-        height: 2px;
+        height: 4px;
         margin: 20px 0;
         background: repeating-linear-gradient(to right, #ff00ff, #ff00ff 10px, transparent 10px, transparent 20px);
+        border: none;
         page-break-after: always;
         break-after: page;
         cursor: pointer;
@@ -155,8 +168,6 @@
     .btn-io:hover { background-color: #00ffcc; color: #0d1117; }
     .btn-io.export { border-color: #ff00ff; color: #ff00ff; }
     .btn-io.export:hover { background-color: #ff00ff; color: #0d1117; }
-    .btn-io.doc { border-color: #ffd700; color: #ffd700; }
-    .btn-io.doc:hover { background-color: #ffd700; color: #0d1117; }
 
     input[type="file"] { display: none; }
     .status-msg { margin-left: auto; font-size: 0.8rem; color: #ffd700; }
@@ -170,11 +181,16 @@
 
     <div class="toolbar" id="doc-toolbar">
         <div class="toolbar-group">
-            <select id="sel-font" title="Schriftart">
+            <select id="sel-font" title="Schriftart" style="width: 120px;">
                 <option value="Arial">Arial</option>
                 <option value="'Times New Roman'">Times New Roman</option>
                 <option value="'Courier New'">Courier New</option>
                 <option value="Georgia">Georgia</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Tahoma">Tahoma</option>
+                <option value="'Trebuchet MS'">Trebuchet MS</option>
+                <option value="Impact">Impact</option>
+                <option value="'Comic Sans MS'">Comic Sans</option>
             </select>
             <select id="sel-size" title="Schriftgröße">
                 <option value="1">10px (Mikro)</option>
@@ -192,6 +208,15 @@
             <button class="btn-tool" data-cmd="italic" title="Kursiv"><i>I</i></button>
             <button class="btn-tool" data-cmd="underline" title="Unterstrichen"><u>U</u></button>
             <button class="btn-tool" data-cmd="strikeThrough" title="Durchgestrichen"><s>S</s></button>
+        </div>
+
+        <!-- NEU: Farb-Wähler für Text und Hintergrund -->
+        <div class="toolbar-group">
+            <label style="font-size:0.75rem; color:#8b949e; margin-right: 2px;">T</label>
+            <input type="color" id="inp-color" value="#000000" title="Textfarbe" class="color-picker">
+            
+            <label style="font-size:0.75rem; color:#8b949e; margin: 0 2px 0 8px;">✎</label>
+            <input type="color" id="inp-bg-color" value="#ffff00" title="Text-Hintergrundfarbe (Marker)" class="color-picker">
         </div>
 
         <div class="toolbar-group">
@@ -218,20 +243,21 @@
     <div class="editor-viewport" id="viewport">
         <div class="a4-page" id="document-editor" contenteditable="true" spellcheck="false">
             <h2>Neues Zieldokument</h2>
-            <p>Beginne hier mit dem Schreiben, ziehe Bilder per <b>Drag & Drop</b> direkt auf das Blatt oder füge kopierte <b>Tabellen</b> ein.</p>
+            <p>Beginne hier mit dem Schreiben. Das Papier wächst automatisch endlos nach unten mit. Beim Speichern als PDF werden die Seiten sauber getrennt.</p>
         </div>
     </div>
 
     <div class="io-footer">
-        <input type="file" id="file-import" accept=".txt,.md,.html,.doc,.docx">
+        <input type="file" id="file-import" accept=".txt,.md,.html">
         <button class="btn-io" id="btn-trigger-import">📂 Dokument Laden</button>
         
         <div style="border-left: 1px solid #30363d; height: 30px; margin: 0 10px;"></div>
         
         <input type="text" id="doc-filename" value="ARTE_Dokument" style="width: 150px;">
         <select id="doc-format">
-            <option value="pdf">.PDF Format</option>
-            <option value="doc">.DOC (Word)</option>
+            <option value="pdf">.PDF Format (A4 Seiten)</option>
+            <!-- NEU: HTML Format für perfekten Google Docs Import -->
+            <option value="html">.HTML (Google Docs Ready)</option>
             <option value="md">.MD (Markdown)</option>
             <option value="txt">.TXT (Plain Text)</option>
         </select>
@@ -242,7 +268,6 @@
 </div>
 
 <script>
-    // Environment Isolation Safety (Funktioniert innerhalb und außerhalb von ShadowDOM)
     const root = typeof shadowRoot !== 'undefined' ? shadowRoot : document;
 
     const editor = root.getElementById('document-editor');
@@ -251,10 +276,13 @@
     const marginInput = root.getElementById('inp-margin-lr');
     const lineheightSelect = root.getElementById('sel-lineheight');
     const fileImport = root.getElementById('file-import');
+    
+    // Farb-Elemente
+    const colorPicker = root.getElementById('inp-color');
+    const bgColorPicker = root.getElementById('inp-bg-color');
 
     // --- 1. WYSIWYG Editor Core Logik ---
     
-    // Command Buttons
     toolbar.addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-tool');
         if (!btn || !btn.dataset.cmd) return;
@@ -264,7 +292,6 @@
         editor.focus();
     });
 
-    // Font Family & Size Selectors
     root.getElementById('sel-font').addEventListener('change', (e) => {
         document.execCommand('fontName', false, e.target.value);
         editor.focus();
@@ -275,11 +302,22 @@
         editor.focus();
     });
 
-    // Zeilenabstand (Line-Height)
+    // NEU: Textfarbe anwenden
+    colorPicker.addEventListener('input', (e) => {
+        document.execCommand('foreColor', false, e.target.value);
+        editor.focus();
+    });
+
+    // NEU: Hintergrundfarbe / Marker anwenden (Kompatibel mit allen Browsern)
+    bgColorPicker.addEventListener('input', (e) => {
+        document.execCommand('hiliteColor', false, e.target.value);
+        document.execCommand('backColor', false, e.target.value);
+        editor.focus();
+    });
+
     lineheightSelect.addEventListener('change', (e) => {
         const selection = window.getSelection();
         if (selection.rangeCount > 0) {
-            // Umhüllt die aktuelle Auswahl mit einem Span für den Zeilenabstand
             const span = document.createElement('span');
             span.style.lineHeight = e.target.value;
             const range = selection.getRangeAt(0);
@@ -290,36 +328,17 @@
         editor.focus();
     });
 
-    // Seitenabstände (Margins)
     marginInput.addEventListener('input', (e) => {
         const mm = e.target.value;
         editor.style.paddingLeft = `${mm}mm`;
         editor.style.paddingRight = `${mm}mm`;
     });
 
-    // Manueller Seitenumbruch (Spacer)
     root.getElementById('btn-page-break').addEventListener('click', () => {
-        const breakNode = document.createElement('div');
-        breakNode.className = 'page-break';
-        breakNode.contentEditable = "false"; // Verhindert reintippen
-        
-        // Fügt einen unsichtbaren Zero-Width-Space dahinter ein, damit man weitertippen kann
-        const zws = document.createTextNode('\u200B'); 
-
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            range.insertNode(zws);
-            range.insertNode(breakNode);
-            range.setStartAfter(zws);
-            range.setEndAfter(zws);
-            selection.removeAllRanges();
-            selection.addRange(range);
-        }
+        document.execCommand('insertHTML', false, '<hr class="page-break" title="Seitenumbruch (Klicken oder Backspace zum Löschen)">');
         editor.focus();
     });
 
-    // Löschen von Seitenumbrüchen per Klick
     editor.addEventListener('click', (e) => {
         if (e.target.classList.contains('page-break')) {
             e.target.remove();
@@ -328,11 +347,18 @@
 
     // --- 2. Kinetische Bild-Injektion (Drag&Drop / Paste mit Resize-Mechanik) ---
 
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        window.addEventListener(eventName, preventDefaults, false);
+    });
+
     function insertResizableImage(base64Src) {
-        // Erzeugt einen Wrapper, der über CSS (resize: both) skalierbar ist
         const wrapper = document.createElement('div');
         wrapper.className = 'img-wrapper';
-        wrapper.contentEditable = "false"; // Wrapper ist nicht editierbar
+        wrapper.contentEditable = "false";
         
         const img = document.createElement('img');
         img.src = base64Src;
@@ -343,7 +369,6 @@
         if (selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
             range.insertNode(wrapper);
-            // Cursor nach dem Bild platzieren
             range.setStartAfter(wrapper);
             selection.removeAllRanges();
             selection.addRange(range);
@@ -385,17 +410,27 @@
         const file = e.target.files[0];
         if (!file) return;
 
+        const ext = file.name.split('.').pop().toLowerCase();
+
+        if (ext === 'doc' || ext === 'docx') {
+            ioStatus.textContent = "Fehler: Word-Dokumente (.doc/.docx) werden nicht unterstützt.";
+            ioStatus.style.color = "#ff7b72";
+            e.target.value = '';
+            return;
+        }
+
         ioStatus.textContent = "Lade Dokument...";
         const reader = new FileReader();
         
         reader.onload = (event) => {
             const content = event.target.result;
-            const ext = file.name.split('.').pop().toLowerCase();
 
             if (ext === 'html') {
-                editor.innerHTML = content;
+                // Beim HTML Import lesen wir den Code sauber in den Editor ein
+                // Versucht den Body-Inhalt zu extrahieren, falls es eine ganze HTML Seite ist
+                const match = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                editor.innerHTML = match ? match[1] : content;
             } else if (ext === 'md') {
-                // Simpler MD to HTML Converter für Basics
                 let html = content
                     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
                     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
@@ -405,7 +440,6 @@
                     .replace(/\n/gim, '<br>');
                 editor.innerHTML = html;
             } else {
-                // txt oder unformatiertes Doc
                 editor.innerText = content; 
             }
             
@@ -416,7 +450,7 @@
         e.target.value = '';
     });
 
-    // --- 4. Asynchrone Export Engine (PDF, DOC, MD, TXT) ---
+    // --- 4. Asynchrone Export Engine (PDF, HTML, MD, TXT) ---
 
     function downloadBlob(content, filename, contentType) {
         const blob = new Blob([content], { type: contentType });
@@ -438,8 +472,22 @@
             downloadBlob(editor.innerText, `${filename}.txt`, 'text/plain');
             ioStatus.textContent = "Export abgeschlossen.";
         } 
+        else if (format === 'html') {
+            // NEU: Baut ein sauberes Web-Dokument, das Google Docs 1:1 lesen kann
+            const htmlContent = `<!DOCTYPE html>
+            <html lang="de">
+            <head>
+                <meta charset="UTF-8">
+                <title>${filename}</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.5; padding: 20px;">
+                ${editor.innerHTML}
+            </body>
+            </html>`;
+            downloadBlob(htmlContent, `${filename}.html`, 'text/html');
+            ioStatus.textContent = "HTML bereit. In Google Drive ziehen zum Öffnen.";
+        }
         else if (format === 'md') {
-            // Rudimentäre HTML zu MD Übersetzung
             let md = editor.innerHTML
                 .replace(/<h1>(.*?)<\/h1>/gi, '# $1\n')
                 .replace(/<h2>(.*?)<\/h2>/gi, '## $1\n')
@@ -448,27 +496,11 @@
                 .replace(/<i>(.*?)<\/i>|<em>(.*?)<\/em>/gi, '*$1*')
                 .replace(/<br\s*[\/]?>/gi, '\n')
                 .replace(/<p>(.*?)<\/p>/gi, '$1\n\n')
-                .replace(/<[^>]+>/g, ''); // Strip remaining HTML
+                .replace(/<[^>]+>/g, ''); 
             downloadBlob(md, `${filename}.md`, 'text/markdown');
             ioStatus.textContent = "Export abgeschlossen.";
         }
-        else if (format === 'doc') {
-            // Natives MS Word HTML Wrapper Format (Bypasses externe DOCX Libs)
-            const preHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-            <head><meta charset='utf-8'><title>Export HTML to Word</title>
-            <style>
-                body { font-family: Arial, sans-serif; }
-                table { border-collapse: collapse; width: 100%; }
-                td, th { border: 1px solid black; padding: 5px; }
-            </style>
-            </head><body>`;
-            const postHtml = "</body></html>";
-            const htmlData = preHtml + editor.innerHTML + postHtml;
-            downloadBlob(htmlData, `${filename}.doc`, 'application/vnd.ms-word;charset=utf-8');
-            ioStatus.textContent = "Export abgeschlossen.";
-        }
         else if (format === 'pdf') {
-            // Isolierte High-Fidelity PDF Generierung via Browser Print-Engine
             const printWindow = window.open('', '_blank');
             const sheetContent = editor.innerHTML;
             const currentPadding = editor.style.paddingLeft || '20mm';
@@ -492,7 +524,7 @@
                         th, td { border: 1px solid #000; padding: 8px; }
                         img { max-width: 100%; height: auto; }
                         .img-wrapper { display: inline-block; max-width: 100%; border: none; }
-                        .page-break { break-after: page; page-break-after: always; border: none; height: 0; background: none; }
+                        hr.page-break { break-after: page; page-break-after: always; border: none; height: 0; background: none; margin: 0; }
                     </style>
                 </head>
                 <body>
@@ -508,6 +540,6 @@
         }
         
         ioStatus.style.color = "#00ffcc";
-        setTimeout(() => ioStatus.textContent = "System betriebsbereit.", 3000);
+        setTimeout(() => { if(ioStatus.textContent.includes("initiiert") || ioStatus.textContent.includes("abgeschlossen")) ioStatus.textContent = "System betriebsbereit."; }, 3000);
     });
 </script>
