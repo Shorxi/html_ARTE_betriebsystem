@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Origin - OS Control Room V4.4 (Pure Signal + Telemetry)</title>
+    <style>
+        /* Core System Theme: Dark Mode / Console Aesthetic */
+        :root {
+            --bg-base: #0d1117;
+            --bg-panel: #161b22;
+            --border-color: #30363d;
+            --text-main: #c9d1d9;
+            --accent-cyan: #00ffcc;
+            --accent-magenta: #ff00ff;
+            --accent-yellow: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Navigation / Branding Status Bar */
+        #os-header {
+            background-color: var(--bg-base);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sys-branding {
+            color: var(--text-main);
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            border-left: 3px solid var(--accent-cyan);
+            padding-left: 10px;
+        }
+
+        .sys-branding strong {
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .sys-status {
+            color: var(--accent-yellow);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .lang-btn {
+            background: transparent;
+            border: 1px solid var(--accent-yellow);
+            color: var(--accent-yellow);
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border-radius: 3px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .lang-btn:hover {
+            background: var(--accent-yellow);
+            color: var(--bg-base);
+        }
+
+        /* -----------------------------------------
+           OS TAB BAR (System-Ebene: Oben)
+           ----------------------------------------- */
+        #os-tab-bar {
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            padding-top: 5px;
+            padding-left: 10px;
+            gap: 4px;
+            overflow-x: auto;
+        }
+
+        #os-tab-bar::-webkit-scrollbar { height: 3px; }
+        #os-tab-bar::-webkit-scrollbar-thumb { background: var(--border-color); }
+
+        /* -----------------------------------------
+           MODULE TAB BAR (Workspace-Ebene: Unten)
+           ----------------------------------------- */
+        #module-tab-bar {
+            background-color: #05070a; 
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            padding-top: 6px;
+            padding-left: 20px;
+            gap: 6px;
+            overflow-x: auto;
+            min-height: 42px; 
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.2);
+        }
+
+        #module-tab-bar::-webkit-scrollbar { height: 3px; }
+        #module-tab-bar::-webkit-scrollbar-thumb { background: var(--border-color); }
+
+        .os-tab {
+            background-color: #0d1117;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            color: #8b949e;
+            padding: 8px 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            white-space: nowrap;
+            max-width: 250px;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .os-tab:hover {
+            color: var(--text-main);
+            background-color: #1f242c;
+        }
+
+        .os-tab.active {
+            background-color: var(--bg-panel);
+            color: var(--accent-cyan);
+            border-top: 2px solid var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        .tab-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .close-tab {
+            color: #ff7b72;
+            font-weight: bold;
+            font-size: 0.8rem;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: 0.2s;
+            opacity: 0.6;
+        }
+        .close-tab:hover {
+            background-color: #ff7b72;
+            color: #0d1117;
+            opacity: 1;
+        }
+
+        /* Workspace Viewport Container */
+        #os-workspace {
+            flex: 1;
+            background-color: var(--bg-panel);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .os-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 25px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .os-view.active { display: block; }
+
+        /* Core Dashboard Layout */
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 450px 1fr;
+            gap: 25px;
+            height: 100%;
+            align-items: start;
+        }
+
+        .panel-section {
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 5px;
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .panel-section h3 {
+            color: var(--accent-magenta);
+            font-size: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .instruction-box {
+            background-color: rgba(255, 215, 0, 0.05);
+            border: 1px solid var(--accent-yellow);
+            color: var(--accent-yellow);
+            padding: 12px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            line-height: 1.5;
+        }
+
+        .instruction-box span { font-weight: bold; color: #ffffff; }
+
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 4px;
+            padding: 25px 20px;
+            text-align: center;
+            background-color: var(--bg-panel);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #8b949e;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent-cyan);
+            background-color: rgba(0, 255, 204, 0.05);
+            color: var(--accent-cyan);
+        }
+
+        .drop-zone svg { stroke: currentColor; width: 32px; height: 32px; }
+
+        label { font-size: 0.85rem; color: #8b949e; }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px;
+            font-family: inherit;
+            resize: none;
+            font-size: 0.85rem;
+        }
+
+        textarea:focus { outline: none; border-color: var(--accent-cyan); }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: transparent;
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease-in-out;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:hover { background-color: var(--accent-cyan); color: var(--bg-base); }
+
+        #sys-log {
+            height: 100%;
+            min-height: 500px;
+            background-color: #05070a;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 15px;
+            font-size: 0.85rem;
+            overflow-y: auto;
+            color: #8b949e;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+        
+        .log-entry.error { color: #ff7b72; }
+        .log-entry.success { color: var(--accent-cyan); }
+        .log-entry.info { color: #8b949e; }
+        .log-entry.warning { color: var(--accent-yellow); }
+
+        .module-viewport-wrapper { max-width: 1400px; margin: 0 auto; height: 100%; }
+
+        /* =========================================
+           STYLE FÜR DEN INTEGRIERTEN DB-MANAGER
+           ========================================= */
+        .db-header { border-bottom: 1px solid #30363d; padding-bottom: 8px; margin-bottom: 15px; }
+        .db-header h3 { color: #00ffcc; margin: 0 0 5px 0; font-size: 1.1rem; text-transform: uppercase; }
+        .db-header p { font-size: 0.8rem; color: #8b949e; margin: 0; }
+        .storage-meta { display: flex; justify-content: space-between; background-color: #0d1117; padding: 10px; border: 1px solid #30363d; font-size: 0.85rem; margin-bottom: 15px; }
+        .meta-value { color: #ffd700; font-weight: bold; }
+        .module-list-container { flex: 1; background-color: #0d1117; border: 1px solid #30363d; overflow-y: auto; padding: 5px; margin-bottom: 15px; }
+        .module-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #161b22; font-size: 0.85rem; }
+        .module-item:last-child { border-bottom: none; }
+        .module-info { display: flex; flex-direction: column; gap: 8px; }
+        .module-name { color: #c9d1d9; }
+        .module-date { font-size: 0.75rem; color: #8b949e; }
+        .btn-action { width: auto; padding: 6px 15px; background-color: transparent; border: 1px solid #ff00ff; color: #ff00ff; cursor: pointer; font-family: inherit; font-size: 0.75rem; text-transform: uppercase; transition: all 0.2s; }
+        .btn-action:hover { background-color: #ff00ff; color: #0d1117; }
+        .security-zone { border: 1px solid #ff7b72; padding: 15px; border-radius: 4px; background-color: rgba(248, 81, 73, 0.05); }
+        .security-zone h4 { color: #ff7b72; font-size: 0.9rem; margin-bottom: 10px; text-transform: uppercase; }
+        .btn-purge { width: 100%; padding: 12px; background-color: transparent; border: 1px solid #ff7b72; color: #ff7b72; cursor: pointer; font-weight: bold; text-transform: uppercase; font-family: inherit; transition: all 0.2s; letter-spacing: 1px; }
+        .btn-purge:hover { background-color: #ff7b72; color: #0d1117; box-shadow: 0 0 10px rgba(248, 81, 73, 0.3); }
+        .status-panel { font-size: 0.8rem; color: #ffd700; text-align: center; margin-bottom: 15px; }
+        .empty-msg { color: #8b949e; text-align: center; padding: 30px; font-size: 0.85rem; }
+
+        /* =========================================
+           STYLE FÜR TELEMETRY NODE V2
+           ========================================= */
+        .telemetry-wrapper { display: flex; flex-direction: column; gap: 15px; height: 100%; max-width: 1400px; margin: 0 auto; }
+        .telemetry-header { border-bottom: 1px solid var(--border-color); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .telemetry-header h3 { color: var(--accent-cyan); margin: 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; }
+        .telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; }
+        @media (max-width: 1024px) { .telemetry-grid { grid-template-columns: 1fr; } }
+        .telemetry-panel { background-color: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 4px; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .progress-bar-bg { width: 100%; height: 12px; background-color: #0d1117; border: 1px solid var(--border-color); border-radius: 2px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background-color: var(--accent-cyan); width: 0%; transition: width 0.5s ease-out; }
+        .data-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px dashed var(--border-color); align-items: center; }
+        .data-row:last-child { border-bottom: none; }
+        .data-label { color: #8b949e; display: flex; align-items: center; gap: 8px; }
+        .data-value { color: #ffffff; font-weight: bold; }
+        .data-highlight { color: var(--accent-magenta); }
+        .telemetry-module-list { flex: 1; overflow-y: auto; background-color: #0d1117; border: 1px solid var(--border-color); padding: 10px; max-height: 250px; }
+        .badge-ram { background-color: rgba(0, 255, 204, 0.1); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; }
+        .badge-disk { background-color: rgba(255, 0, 255, 0.1); color: var(--accent-magenta); border: 1px solid var(--accent-magenta); padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; }
+        .badge-session { background-color: rgba(255, 215, 0, 0.1); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; }
+        .ping-display { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #0d1117; border: 1px solid var(--border-color); padding: 20px; gap: 10px; }
+        .ping-value { font-size: 2rem; color: var(--accent-cyan); font-weight: bold; text-shadow: 0 0 10px rgba(0, 255, 204, 0.3); }
+        .ping-unit { font-size: 1rem; color: #8b949e; }
+        .btn-ping { border-color: var(--accent-magenta); color: var(--accent-magenta); }
+        .btn-ping:hover { background-color: var(--accent-magenta); color: var(--bg-base); }
+    </style>
+</head>
+<body>
+
+    <header id="os-header">
+        <div class="sys-branding" data-i18n="brand">
+            Architekt <strong>Emanuel Schaaf</strong> in Kooperation mit <strong>Google KI</strong> erzeugtes System Framework Copyright
+        </div>
+        <div class="header-right">
+            <div class="sys-status"><span data-i18n="kernel">Kernel: V4.4-Pure-Signal | Modules:</span> <span id="module-count" style="margin-right: 15px;">0</span></div>
+            <button class="lang-btn" onclick="i18n.toggle()">EN / DE</button>
+        </div>
+    </header>
+
+    <nav id="os-tab-bar">
+        <div class="os-tab active" id="tab-core-control" onclick="Core.switchTab('view-core-control')">
+            <span class="tab-title" data-i18n="core_ctrl">🔒 Core Control</span>
+        </div>
+        <div class="os-tab" id="tab-db-manager" onclick="Core.switchTab('view-db-manager')">
+            <span class="tab-title" data-i18n="db_ctrl">🗄️ Storage Manager</span>
+        </div>
+        <!-- NEU: Fest verankerter Telemetry Tab -->
+        <div class="os-tab" id="tab-telemetry" onclick="Core.switchTab('view-telemetry')">
+            <span class="tab-title" data-i18n="tel_tab">📊 Telemetry Node</span>
+        </div>
+    </nav>
+
+    <nav id="module-tab-bar"></nav>
+
+    <div id="os-workspace">
+        
+        <div id="view-core-control" class="os-view active">
+            <div class="dashboard-layout">
+                <div class="panel-section">
+                    <h3 data-i18n="matrix">Module Injection Matrix</h3>
+                    <div class="instruction-box" data-i18n="boot_warn">
+                        <span>WICHTIGE BOOT-REIHENFOLGE EINHALTEN:</span><br><br>
+                        1. ARTE_System_Core.html<br>
+                        2. Danach alle weiteren Module aus dem Module-Ordner hinzufügen.
+                    </div>
+                    <div class="drop-zone" id="file-drop-zone">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p data-i18n="drop">Module hierher ziehen (Drag & Drop)<br>oder klicken zum Hochladen</p>
+                        <input type="file" id="module-file-upload" accept=".html,.txt" multiple style="display:none;">
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label for="raw-html-input" data-i18n="manual">Manuelle Raw-Code Injektion (Fallback):</label>
+                        <textarea id="raw-html-input" placeholder="<div>Modul-Struktur...</div><style>...</style><script>...<\/script>"></textarea>
+                        <button onclick="Core.adoptFromCode()" data-i18n="btn_adopt">Code übernehmen & speichern</button>
+                    </div>
+                </div>
+                <div id="sys-log"></div>
+            </div>
+        </div>
+
+        <div id="view-db-manager" class="os-view">
+            <div class="panel-section" style="height: 100%; display: flex; flex-direction: column;">
+                <div class="db-header">
+                    <h3 data-i18n="db_title">Storage & Lifecycle Manager</h3>
+                    <p data-i18n="db_desc">Zentrale Datenkontrolle und kryptografischer Shutter-Schutz.</p>
+                </div>
+                <div class="storage-meta">
+                    <div><span data-i18n="db_name">Datenbank:</span> <span class="meta-value">ARTE_Core_DB</span></div>
+                    <div><span data-i18n="db_mods">Module im Speicher:</span> <span class="meta-value" id="db-count-display">0</span></div>
+                </div>
+                <div class="module-list-container" id="db-list-container">
+                    <div class="empty-msg" data-i18n="db_empty">[Keine persistenten Module im Speicher gefunden]</div>
+                </div>
+                <div class="status-panel" id="db-status-msg" data-i18n="db_ready">Bereit. Scanne Speicherzellen...</div>
+                <div class="security-zone">
+                    <h4 data-i18n="db_zone">Emergency Anti-Tamper Zone</h4>
+                    <button class="btn-purge" onclick="Core.masterPurge()" data-i18n="db_btn_purge">Master Purge (Reset All)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEU: System Telemetry Node View -->
+        <div id="view-telemetry" class="os-view">
+            <div class="telemetry-wrapper">
+                <div class="telemetry-header">
+                    <h3 data-i18n="tel_title">System Telemetry Node V2</h3>
+                    <button class="btn-action" id="btn-refresh-all" style="width: auto;" data-i18n="tel_refresh">🔄 Refresh Matrix</button>
+                </div>
+
+                <div class="telemetry-grid">
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        
+                        <div class="telemetry-panel">
+                            <div class="panel-title" data-i18n="tel_global_store">💾 Globaler Browser-Speicher</div>
+                            <div class="data-row">
+                                <span class="data-label" data-i18n="tel_quota">Gesamtkapazität (Quota):</span>
+                                <span class="data-value" id="global-quota" data-i18n="tel_loading">Lade...</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label" data-i18n="tel_used">Belegter Speicher:</span>
+                                <span class="data-value data-highlight" id="global-usage" data-i18n="tel_loading">Lade...</span>
+                            </div>
+                            <div style="margin-top: 5px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #8b949e; margin-bottom: 3px;">
+                                    <span data-i18n="tel_util">Auslastung</span>
+                                    <span id="global-percent">0%</span>
+                                </div>
+                                <div class="progress-bar-bg">
+                                    <div class="progress-bar-fill" id="global-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="telemetry-panel" style="flex: 1;">
+                            <div class="panel-title" data-i18n="tel_mod_store">📦 Modul-Speicher Scanner (KB)</div>
+                            <div class="telemetry-module-list" id="module-storage-list">
+                                <!-- Scanner Results go here -->
+                            </div>
+                            <div class="data-row" style="margin-top: 10px; border-bottom: none; background-color: #0d1117; padding: 8px; border: 1px solid #30363d;">
+                                <span class="data-label" style="color: #ffffff;" data-i18n="tel_total">Gesamtbelegung (RAM + DISK):</span>
+                                <span class="data-value" id="module-total-kb" style="color: #ffd700; font-size: 1.1rem;">0.00 KB</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="telemetry-panel">
+                        <div class="panel-title" data-i18n="tel_lat_title">🌐 Netzwerk-Latenz (Nanosekunden)</div>
+                        
+                        <div class="ping-display">
+                            <div style="color: #8b949e; font-size: 0.85rem; text-align: center; margin-bottom: 10px;" data-i18n="tel_lat_desc">
+                                Echtzeit-Roundtrip-Messung zu Backbone-Infrastruktur.
+                            </div>
+                            <div>
+                                <span class="ping-value" id="ping-output">---</span>
+                            </div>
+                            <div class="ping-unit" data-i18n="tel_lat_unit">Nanosekunden (ns)</div>
+                        </div>
+
+                        <button class="btn-action ping-btn" id="btn-measure-ping" data-i18n="tel_ping_btn">⚡ Ping Messung Starten</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /**
+         * Open Origin Architecture - Tabbed Persistent Kernel V4.4 (PURE SIGNAL)
+         * OS only broadcasts language changes. Modules translate themselves natively.
+         */
+        
+        const i18n = {
+            current: 'de',
+            dict: {
+                de: {
+                    brand: "Architekt <strong>Emanuel Schaaf</strong> in Kooperation mit <strong>Google KI</strong> erzeugtes System Framework Copyright",
+                    kernel: "Kernel: V4.4-Pure-Signal | Modules:", core_ctrl: "🔒 Core Control", db_ctrl: "🗄️ Storage Manager",
+                    matrix: "Module Injection Matrix",
+                    boot_warn: "<span>WICHTIGE BOOT-REIHENFOLGE EINHALTEN:</span><br><br>1. ARTE_System_Core.html<br>2. Danach alle weiteren Module aus dem Module-Ordner hinzufügen.",
+                    drop: "Module hierher ziehen (Drag & Drop)<br>oder klicken zum Hochladen", manual: "Manuelle Raw-Code Injektion (Fallback):", btn_adopt: "Code übernehmen & speichern", tab_module: "Modul",
+                    db_title: "Storage & Lifecycle Manager", db_desc: "Zentrale Datenkontrolle und kryptografischer Shutter-Schutz.",
+                    db_name: "Datenbank:", db_mods: "Module im Speicher:", db_ready: "Bereit. Scanne Speicherzellen...",
+                    db_zone: "Emergency Anti-Tamper Zone", db_btn_purge: "Master Purge (Reset All)", db_empty: "[Keine persistenten Module im Speicher gefunden]",
+                    db_reg: "Registriert:", db_del: "Löschen", confirm_del: "WARNUNG: Modul unwiderruflich löschen?", wipe_warn: "WARNUNG: Dies löscht ALLE Module unwiderruflich aus der Datenbank. Fortfahren?",
+                    wipe_act: "Wipe-Sequenz aktiv: Entleere Datenbank...", wipe_done: "DATENBANK ERFOLGREICH ENTLEERT.",
+                    log_boot: "A.R.T.E. Kernel bootet... Synchronisiere Sektoren.", log_db_active: "Lokales Zentrallager aktiv.",
+                    log_wait: "Keine persistenten Module vorhanden. Warte auf Injektion.", log_db_err: "Kritischer Defekt in der Speicher-Engine beim Booten.",
+                    log_empty: "Injektions-Feld leer.", log_read: "Lese Datei ein:", log_err_read: "Fehler beim Lesen der Datei",
+                    log_saved: "persistent im Langzeitspeicher verankert.", log_restored: "wiederhergestellt.",
+                    log_mod_found: "Module im Speicher erfasst. Initialisiere Tabs...", log_inception: "BLOCKIERT: Du versuchst das Betriebssystem in sich selbst zu laden. Abgebrochen!",
+                    log_deleted: "Modul erfolgreich gelöscht", log_purge: "Kritischer Sicherheits-Purge ausgeführt! Alle Einträge gelöscht (DB intakt).",
+                    // Telemetry Translations
+                    tel_tab: "📊 Telemetry Node", tel_title: "System Telemetry Node V2", tel_refresh: "🔄 Refresh Matrix",
+                    tel_global_store: "💾 Globaler Browser-Speicher", tel_quota: "Gesamtkapazität (Quota):", tel_used: "Belegter Speicher:",
+                    tel_util: "Auslastung", tel_mod_store: "📦 Modul-Speicher Scanner (KB)", tel_total: "Gesamtbelegung (RAM + DISK):",
+                    tel_lat_title: "🌐 Netzwerk-Latenz (Nanosekunden)", tel_lat_desc: "Echtzeit-Roundtrip-Messung zu Backbone-Infrastruktur.",
+                    tel_lat_unit: "Nanosekunden (ns)", tel_ping_btn: "⚡ Ping Messung Starten", tel_ram_os: "Globale RAM-Belegung des Betriebssystems:",
+                    tel_measuring: "Messe...", tel_error: "Fehler", tel_err_api: "API Fehler", tel_not_sup: "Nicht unterstützt", tel_loading: "Lade..."
+                },
+                en: {
+                    brand: "System Framework Architect <strong>Emanuel Schaaf</strong> in cooperation with <strong>Google AI</strong> Copyright",
+                    kernel: "Kernel: V4.4-Pure-Signal | Modules:", core_ctrl: "🔒 Core Control", db_ctrl: "🗄️ Storage Manager",
+                    matrix: "Module Injection Matrix",
+                    boot_warn: "<span>STRICT BOOT SEQUENCE REQUIRED:</span><br><br>1. ARTE_System_Core.html<br>2. Then add all remaining modules from the Modules folder.",
+                    drop: "Drag & drop modules here<br>or click to upload", manual: "Manual Raw Code Injection (Fallback):", btn_adopt: "Adopt & Save Code", tab_module: "Module",
+                    db_title: "Storage & Lifecycle Manager", db_desc: "Central data control and cryptographic shutter protection.",
+                    db_name: "Database:", db_mods: "Stored Modules:", db_ready: "Ready. Scanning memory cells...",
+                    db_zone: "Emergency Anti-Tamper Zone", db_btn_purge: "Master Purge (Reset All)", db_empty: "[No persistent modules found in storage]",
+                    db_reg: "Registered:", db_del: "Delete", confirm_del: "WARNING: Irrevocably delete this module?", wipe_warn: "WARNING: This will irrevocably delete ALL modules from the database. Proceed?",
+                    wipe_act: "Wipe sequence active: Clearing database...", wipe_done: "DATABASE SUCCESSFULLY CLEARED.",
+                    log_boot: "A.R.T.E. Kernel booting... Synchronizing sectors.", log_db_active: "Local central storage active.",
+                    log_wait: "No persistent modules found. Awaiting injection.", log_db_err: "Critical failure in storage engine during boot.",
+                    log_empty: "Injection field empty.", log_read: "Reading file:", log_err_read: "Error reading file",
+                    log_saved: "persistently anchored in long-term storage.", log_restored: "restored.",
+                    log_mod_found: "modules found in storage. Initializing tabs...", log_inception: "BLOCKED: You are trying to load the OS into itself. Aborted!",
+                    log_deleted: "Module successfully deleted", log_purge: "Critical security purge executed! All entries cleared (DB intact).",
+                    // Telemetry Translations
+                    tel_tab: "📊 Telemetry Node", tel_title: "System Telemetry Node V2", tel_refresh: "🔄 Refresh Matrix",
+                    tel_global_store: "💾 Global Browser Storage", tel_quota: "Total Capacity (Quota):", tel_used: "Used Storage:",
+                    tel_util: "Utilization", tel_mod_store: "📦 Module Storage Scanner (KB)", tel_total: "Total Footprint (RAM + DISK):",
+                    tel_lat_title: "🌐 Network Latency (Nanoseconds)", tel_lat_desc: "Real-time roundtrip measurement to backbone infrastructure.",
+                    tel_lat_unit: "Nanoseconds (ns)", tel_ping_btn: "⚡ Start Ping Measurement", tel_ram_os: "Global RAM footprint of the OS:",
+                    tel_measuring: "Measuring...", tel_error: "Error", tel_err_api: "API Error", tel_not_sup: "Not supported", tel_loading: "Loading..."
+                }
+            },
+
+            t: function(key) { return this.dict[this.current][key] || key; },
+
+            updateUI: function() {
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    el.innerHTML = this.t(el.getAttribute('data-i18n'));
+                });
+                document.documentElement.lang = this.current;
+                
+                if (Core.db) {
+                    Core.refreshStorageList();
+                    Core.recalculateModuleNumbers(); 
+                }
+                
+                // Triggert den Telemetry UI Refresh, um die dynamischen JS-Texte neu zu rendern
+                if (typeof TelemetryNode !== 'undefined') {
+                    TelemetryNode.refreshAll();
+                }
+            },
+
+            toggle: function() {
+                this.current = this.current === 'de' ? 'en' : 'de';
+                localStorage.setItem('arte_lang_pref', this.current);
+                this.updateUI();
+                Core.log(`Language switched to ${this.current.toUpperCase()}`, 'info');
+                
+                // SIGNAL FIRE: Sendet das i18n Signal an alle geladenen Module!
+                window.osBus.emit('lang-changed', this.current);
+            },
+
+            init: function() {
+                const saved = localStorage.getItem('arte_lang_pref');
+                if (saved) { this.current = saved; } 
+                else {
+                    const browserLang = navigator.language || navigator.userLanguage;
+                    this.current = browserLang.startsWith('de') ? 'de' : 'en';
+                }
+                this.updateUI();
+            }
+        };
+
+        const EventBus = {
+            listeners: {},
+            on: function(event, callback) {
+                if (!this.listeners[event]) this.listeners[event] = [];
+                this.listeners[event].push(callback);
+            },
+            emit: function(event, data) {
+                if (this.listeners[event]) {
+                    this.listeners[event].forEach(callback => callback(data));
+                }
+            }
+        };
+
+        window.osBus = EventBus;
+
+        const DB_NAME = 'ARTE_Core_DB';
+        const STORE_NAME = 'installed_modules';
+
+        const Core = {
+            moduleCounter: 0,
+            db: null,
+            activeTabId: 'view-core-control',
+            
+            log: function(msg, type = 'info') {
+                const logBox = document.getElementById('sys-log');
+                if (!logBox) return;
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                const time = new Date().toLocaleTimeString();
+                entry.textContent = `[${time}] ${msg}`;
+                logBox.appendChild(entry);
+                logBox.scrollTop = logBox.scrollHeight;
+            },
+
+            updateCount: function() { document.getElementById('module-count').textContent = this.moduleCounter; },
+
+            switchTab: function(viewId) {
+                document.querySelectorAll('.os-view').forEach(v => v.classList.remove('active'));
+                document.querySelectorAll('.os-tab').forEach(t => t.classList.remove('active'));
+
+                const targetView = document.getElementById(viewId);
+                if (targetView) targetView.classList.add('active');
+
+                const tabs = document.querySelectorAll('.os-tab');
+                tabs.forEach(tab => {
+                    if (tab.getAttribute('data-target') === viewId) tab.classList.add('active');
+                    // Der Telemetrie-Tab hat kein data-target Attribut, wir matchen ihn manuell
+                    if (viewId === 'view-telemetry' && tab.id === 'tab-telemetry') tab.classList.add('active');
+                });
+
+                this.activeTabId = viewId;
+            },
+
+            initStorage: function() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(DB_NAME, 1);
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    };
+                    request.onsuccess = (e) => { this.db = e.target.result; resolve(); };
+                    request.onerror = (e) => { this.log(`${i18n.t('log_db_err')} ${e.target.error}`, 'error'); reject(e.target.error); };
+                });
+            },
+
+            refreshStorageList: function() {
+                if (!this.db) return;
+                const transaction = this.db.transaction(STORE_NAME, 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+
+                request.onsuccess = () => {
+                    const modules = request.result;
+                    const listContainer = document.getElementById('db-list-container');
+                    const countDisplay = document.getElementById('db-count-display');
+                    
+                    listContainer.innerHTML = '';
+                    countDisplay.textContent = modules.length;
+
+                    if (modules.length === 0) {
+                        listContainer.innerHTML = `<div class="empty-msg">${i18n.t('db_empty')}</div>`;
+                        return;
+                    }
+
+                    modules.forEach(mod => {
+                        const item = document.createElement('div');
+                        item.className = 'module-item';
+                        const info = document.createElement('div');
+                        info.className = 'module-info';
+                        
+                        const name = document.createElement('span');
+                        name.className = 'module-name';
+                        name.textContent = mod.title || mod.id;
+                        
+                        const date = document.createElement('span');
+                        date.className = 'module-date';
+                        date.textContent = `${i18n.t('db_reg')} ${mod.timestamp || 'N/A'}`;
+                        
+                        info.appendChild(name);
+                        info.appendChild(date);
+
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'btn-action';
+                        deleteBtn.textContent = i18n.t('db_del');
+                        
+                        deleteBtn.addEventListener('click', () => this.deleteSingleModule(mod.id));
+
+                        item.appendChild(info);
+                        item.appendChild(deleteBtn);
+                        listContainer.appendChild(item);
+                    });
+                };
+            },
+
+            recalculateModuleNumbers: function() {
+                const tabs = document.querySelectorAll('#module-tab-bar .os-tab');
+                this.moduleCounter = 0; 
+                
+                tabs.forEach(tab => {
+                    this.moduleCounter++;
+                    const titleSpan = tab.querySelector('.tab-title');
+                    if (titleSpan) titleSpan.textContent = `${i18n.t('tab_module')}-${this.moduleCounter}`;
+                });
+                this.updateCount();
+            },
+
+            deleteSingleModule: function(id) {
+                if (!confirm(i18n.t('confirm_del'))) return;
+                
+                const transaction = this.db.transaction(STORE_NAME, 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.delete(id);
+                
+                request.onsuccess = () => {
+                    const msgBox = document.getElementById('db-status-msg');
+                    msgBox.textContent = `${i18n.t('log_deleted')} ${id}`;
+                    msgBox.style.color = '#00ffcc';
+                    
+                    this.refreshStorageList();
+                    
+                    const viewId = `view_${id}`;
+                    const tab = document.querySelector(`.os-tab[data-target="${viewId}"]`);
+                    if (tab) tab.remove();
+                    
+                    const view = document.getElementById(viewId);
+                    if (view) view.remove();
+
+                    this.log(`Modul ${id} aus Langzeitspeicher entfernt.`, 'warning');
+                    
+                    if (this.activeTabId === viewId) this.switchTab('view-core-control');
+                    this.recalculateModuleNumbers();
+                    
+                    if (typeof TelemetryNode !== 'undefined') TelemetryNode.refreshAll();
+
+                    setTimeout(() => { msgBox.textContent = i18n.t('db_ready'); msgBox.style.color = '#ffd700'; }, 3000);
+                };
+            },
+
+            masterPurge: function() {
+                if (!confirm(i18n.t('wipe_warn'))) return;
+                const msgBox = document.getElementById('db-status-msg');
+                msgBox.textContent = i18n.t('wipe_act');
+                msgBox.style.color = '#ff7b72';
+
+                if (!this.db) return;
+                const transaction = this.db.transaction(STORE_NAME, 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.clear();
+
+                request.onsuccess = () => {
+                    msgBox.textContent = i18n.t('wipe_done');
+                    document.getElementById('db-list-container').innerHTML = `<div class="empty-msg">${i18n.t('db_empty')}</div>`;
+                    this.log(i18n.t('log_purge'), 'error');
+                    
+                    document.getElementById('module-tab-bar').innerHTML = ''; 
+                    document.querySelectorAll('#os-workspace .os-view').forEach(view => {
+                        // Preserve core views including telemetry
+                        if (view.id !== 'view-core-control' && view.id !== 'view-db-manager' && view.id !== 'view-telemetry') {
+                            view.remove();
+                        }
+                    });
+
+                    this.recalculateModuleNumbers();
+                    this.switchTab('view-db-manager');
+                    
+                    if (typeof TelemetryNode !== 'undefined') TelemetryNode.refreshAll();
+                };
+            },
+
+            saveModuleToStorage: function(id, title, htmlString) {
+                if (!this.db) return;
+                const transaction = this.db.transaction(STORE_NAME, 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const record = { id: id, title: title, code: htmlString, timestamp: new Date().toLocaleString() };
+                
+                store.put(record);
+                transaction.oncomplete = () => {
+                    this.log(`${i18n.t('tab_module')} '${title}' ${i18n.t('log_saved')}`, 'success');
+                    this.refreshStorageList(); 
+                };
+            },
+
+            createTabElement: function(viewId, displayName, realTitle, moduleId) {
+                const tabBar = document.getElementById('module-tab-bar');
+                const tab = document.createElement('div');
+                tab.className = 'os-tab';
+                tab.setAttribute('data-target', viewId);
+                
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'tab-title';
+                titleSpan.textContent = displayName;
+                if (realTitle) tab.title = realTitle;
+                
+                tab.appendChild(titleSpan);
+
+                if (moduleId) {
+                    const closeBtn = document.createElement('span');
+                    closeBtn.className = 'close-tab';
+                    closeBtn.textContent = '✖';
+                    closeBtn.title = "Modul schließen & löschen";
+                    closeBtn.addEventListener('click', (e) => { e.stopPropagation(); this.deleteSingleModule(moduleId); });
+                    tab.appendChild(closeBtn);
+                }
+                
+                tab.addEventListener('click', () => this.switchTab(viewId));
+                tabBar.appendChild(tab);
+            },
+
+            adoptModule: function(htmlString, sourceName, saveToDB = true, existingId = null) {
+                try {
+                    if (htmlString.includes('id="os-workspace"') && htmlString.includes('os-tab-bar')) {
+                        this.log(i18n.t('log_inception'), 'error'); return;
+                    }
+
+                    this.moduleCounter++;
+                    const timestampId = new Date().getTime();
+                    const hash = Math.random().toString(36).substring(2, 8);
+                    const tagName = `arte-module-${timestampId}-${hash}`; 
+                    
+                    const moduleId = existingId || ('mod_' + timestampId + '_' + hash);
+                    const viewId = `view_${moduleId}`;
+                    
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlString, 'text/html');
+
+                    class DynamicModule extends HTMLElement {
+                        constructor() {
+                            super();
+                            const shadow = this.attachShadow({mode: 'open'});
+                            const container = document.createElement('div');
+                            container.className = "module-viewport-wrapper";
+                            container.style.height = '100%';
+                            container.style.overflow = 'auto';
+
+                            const scripts = Array.from(doc.querySelectorAll('script'));
+                            scripts.forEach(s => s.remove());
+
+                            const template = document.createElement('div');
+                            template.innerHTML = doc.head.innerHTML + doc.body.innerHTML;
+                            container.appendChild(template);
+                            shadow.appendChild(container);
+
+                            scripts.forEach(script => {
+                                const newScript = document.createElement('script');
+                                if (script.src) { newScript.src = script.src; } 
+                                else {
+                                    newScript.textContent = "(function() {\n" +
+                                        "try {\n" +
+                                        "const shadowRoot = document.getElementById('" + viewId + "').querySelector('" + tagName + "').shadowRoot;\n" +
+                                        script.textContent + "\n" +
+                                        "} catch (e) { console.error('[Module Script Error]', e); }\n" +
+                                        "})();";
+                                }
+                                shadow.appendChild(newScript);
+                            });
+                        }
+                    }
+
+                    customElements.define(tagName, DynamicModule);
+                    
+                    const viewContainer = document.createElement('div');
+                    viewContainer.id = viewId;
+                    viewContainer.className = 'os-view';
+                    
+                    const instance = document.createElement(tagName);
+                    viewContainer.appendChild(instance);
+                    document.getElementById('os-workspace').appendChild(viewContainer);
+                    
+                    this.createTabElement(viewId, "Loading...", sourceName, moduleId);
+                    this.recalculateModuleNumbers();
+                    
+                    if (saveToDB) {
+                        this.saveModuleToStorage(moduleId, sourceName, htmlString);
+                        this.switchTab(viewId);
+                    } else {
+                        this.log(`${i18n.t('tab_module')} '${sourceName}' ${i18n.t('log_restored')}`, 'info');
+                    }
+                    
+                    if (typeof TelemetryNode !== 'undefined') TelemetryNode.refreshAll();
+                    
+                } catch (error) {
+                    this.log(`Adoption failed: ${error.message}`, 'error');
+                }
+            },
+
+            adoptFromCode: function() {
+                const code = document.getElementById('raw-html-input').value;
+                if (!code.trim()) { this.log(i18n.t('log_empty'), 'error'); return; }
+                this.adoptModule(code, `Manual_Injection_${this.moduleCounter + 1}`, true);
+                document.getElementById('raw-html-input').value = '';
+            },
+
+            handleFiles: function(files) {
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const content = e.target.result;
+                        const moduleName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                        this.log(`${i18n.t('log_read')} ${file.name}...`, 'info');
+                        this.adoptModule(content, moduleName, true);
+                    };
+                    reader.onerror = () => this.log(`${i18n.t('log_err_read')} ${file.name}.`, 'error');
+                    reader.readAsText(file, "UTF-8");
+                });
+            },
+
+            bootSystem: async function() {
+                i18n.init();
+                this.log(i18n.t('log_boot'), 'info');
+                
+                try {
+                    await this.initStorage();
+                    this.log(i18n.t('log_db_active'), 'success');
+                    this.refreshStorageList(); 
+
+                    const transaction = this.db.transaction(STORE_NAME, 'readonly');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.getAll();
+
+                    request.onsuccess = () => {
+                        const modules = request.result;
+                        if (modules.length > 0) {
+                            this.log(`${modules.length} ${i18n.t('log_mod_found')}`, 'info');
+                            modules.forEach(mod => this.adoptModule(mod.code, mod.title, false, mod.id));
+                            Core.switchTab('view-core-control');
+                        } else {
+                            this.log(i18n.t('log_wait'), 'warning');
+                        }
+                        
+                        // Initialize Telemetry Node on Boot
+                        if (typeof TelemetryNode !== 'undefined') TelemetryNode.init();
+                    };
+                } catch (e) {
+                    this.log(i18n.t('log_db_err'), 'error');
+                }
+            }
+        };
+
+        const dropZone = document.getElementById('file-drop-zone');
+        const fileUpload = document.getElementById('module-file-upload');
+
+        dropZone.addEventListener('click', () => fileUpload.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault(); dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) Core.handleFiles(e.dataTransfer.files);
+        });
+        fileUpload.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) Core.handleFiles(e.target.files);
+            e.target.value = '';
+        });
+
+        // ==========================================
+        // SYSTEM TELEMETRY NODE (INTEGRATED)
+        // ==========================================
+        const TelemetryNode = {
+            init: function() {
+                document.getElementById('btn-refresh-all').addEventListener('click', () => this.refreshAll());
+                document.getElementById('btn-measure-ping').addEventListener('click', () => this.measurePing());
+                this.refreshAll();
+            },
+            
+            refreshAll: function() {
+                this.updateGlobalStorage();
+                this.deepScanModules();
+            },
+
+            updateGlobalStorage: async function() {
+                const elQuota = document.getElementById('global-quota');
+                const elUsage = document.getElementById('global-usage');
+                const elPercent = document.getElementById('global-percent');
+                const elBar = document.getElementById('global-bar');
+
+                if (navigator.storage && navigator.storage.estimate) {
+                    try {
+                        const estimate = await navigator.storage.estimate();
+                        const quotaMB = (estimate.quota / (1024 * 1024)).toFixed(2);
+                        const usageMB = (estimate.usage / (1024 * 1024)).toFixed(3);
+                        const percent = ((estimate.usage / estimate.quota) * 100).toFixed(4);
+
+                        elQuota.textContent = `${quotaMB} MB`;
+                        elUsage.textContent = `${usageMB} MB`;
+                        elPercent.textContent = `${percent}%`;
+                        elBar.style.width = `${Math.min(percent, 100)}%`;
+
+                    } catch (error) {
+                        elQuota.textContent = i18n.t('tel_err_api');
+                        elUsage.textContent = i18n.t('tel_err_api');
+                    }
+                } else {
+                    elQuota.textContent = i18n.t('tel_not_sup');
+                    elUsage.textContent = i18n.t('tel_not_sup');
+                }
+            },
+
+            deepScanModules: function() {
+                const listContainer = document.getElementById('module-storage-list');
+                const totalKbDisplay = document.getElementById('module-total-kb');
+                
+                listContainer.innerHTML = '';
+                let totalBytes = 0;
+                let foundAnything = false;
+
+                const mainDoc = window.document;
+                const moduleNodes = mainDoc.querySelectorAll('[id*="modul" i], [class*="modul" i]');
+                
+                moduleNodes.forEach(node => {
+                    if (node.parentElement && (node.parentElement.id.toLowerCase().includes('modul') || node.parentElement.className.toLowerCase().includes('modul'))) {
+                        return; 
+                    }
+                    
+                    foundAnything = true;
+                    const sizeBytes = new Blob([node.outerHTML]).size;
+                    totalBytes += sizeBytes;
+                    
+                    const identifier = node.id || node.className || 'Unnamed Node';
+                    const row = document.createElement('div');
+                    row.className = 'data-row';
+                    row.innerHTML = `
+                        <span class="data-label"><span class="badge-ram">RAM</span> ${identifier}</span>
+                        <span class="data-value">${(sizeBytes / 1024).toFixed(2)} KB</span>
+                    `;
+                    listContainer.appendChild(row);
+                });
+
+                for (let i = 0; i < localStorage.length; i++) {
+                    foundAnything = true;
+                    const key = localStorage.key(i);
+                    const value = localStorage.getItem(key);
+                    const sizeBytes = new Blob([key + value]).size;
+                    totalBytes += sizeBytes;
+
+                    const row = document.createElement('div');
+                    row.className = 'data-row';
+                    row.innerHTML = `
+                        <span class="data-label"><span class="badge-disk">DISK</span> ${key}</span>
+                        <span class="data-value">${(sizeBytes / 1024).toFixed(2)} KB</span>
+                    `;
+                    listContainer.appendChild(row);
+                }
+
+                for (let i = 0; i < sessionStorage.length; i++) {
+                    foundAnything = true;
+                    const key = sessionStorage.key(i);
+                    const value = sessionStorage.getItem(key);
+                    const sizeBytes = new Blob([key + value]).size;
+                    totalBytes += sizeBytes;
+
+                    const row = document.createElement('div');
+                    row.className = 'data-row';
+                    row.innerHTML = `
+                        <span class="data-label"><span class="badge-session">SESSION</span> ${key}</span>
+                        <span class="data-value">${(sizeBytes / 1024).toFixed(2)} KB</span>
+                    `;
+                    listContainer.appendChild(row);
+                }
+
+                if (!foundAnything) {
+                    const docSize = new Blob([mainDoc.documentElement.outerHTML]).size;
+                    totalBytes += docSize;
+                    listContainer.innerHTML = `
+                        <div class="data-row">
+                            <span class="data-label" style="color: #8b949e;">${i18n.t('tel_ram_os')}</span>
+                            <span class="data-value">${(docSize / 1024).toFixed(2)} KB</span>
+                        </div>
+                    `;
+                }
+
+                const totalKB = (totalBytes / 1024).toFixed(2);
+                totalKbDisplay.textContent = `${totalKB} KB`;
+            },
+
+            measurePing: async function() {
+                const pingOutput = document.getElementById('ping-output');
+                const btnPing = document.getElementById('btn-measure-ping');
+
+                btnPing.disabled = true;
+                pingOutput.style.color = '#8b949e';
+                pingOutput.textContent = i18n.t('tel_measuring');
+
+                const start = performance.now();
+
+                try {
+                    await fetch('https://1.1.1.1/cdn-cgi/trace', { 
+                        mode: 'no-cors', 
+                        cache: 'no-store' 
+                    });
+                    
+                    const end = performance.now();
+                    const timeMs = end - start;
+                    const timeNs = Math.round(timeMs * 1000000);
+                    
+                    pingOutput.textContent = timeNs.toLocaleString('de-DE');
+                    pingOutput.style.color = '#00ffcc';
+
+                } catch (error) {
+                    pingOutput.textContent = i18n.t('tel_error');
+                    pingOutput.style.color = '#ff7b72';
+                    console.error("Ping Error:", error);
+                } finally {
+                    btnPing.disabled = false;
+                }
+            }
+        };
+
+        window.onload = () => Core.bootSystem();
+    </script>
+</body>
+</html>
