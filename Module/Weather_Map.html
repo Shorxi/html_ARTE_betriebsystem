@@ -1,0 +1,1277 @@
+<style>
+    .wr-module {
+        height: 100%;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        font-family: "Courier New", Courier, monospace;
+        color: #c9d1d9;
+        background: #0d1117;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    .wr-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 8px;
+        gap: 12px;
+        flex-shrink: 0;
+    }
+
+    .wr-header h3 {
+        margin: 0;
+        color: #00ffcc;
+        font-size: 1.08rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .wr-subtitle {
+        color: #8b949e;
+        font-size: 0.72rem;
+    }
+
+    .wr-btn {
+        background: transparent;
+        border: 1px solid #00ffcc;
+        color: #00ffcc;
+        font-family: inherit;
+        font-weight: bold;
+        cursor: pointer;
+        text-transform: uppercase;
+        padding: 8px 10px;
+        font-size: 0.72rem;
+    }
+
+    .wr-btn:hover {
+        background: #00ffcc;
+        color: #05070a;
+    }
+
+    .wr-btn.gold {
+        border-color: #ffd700;
+        color: #ffd700;
+    }
+
+    .wr-btn.gold:hover {
+        background: #ffd700;
+        color: #05070a;
+    }
+
+    .wr-btn.magenta {
+        border-color: #ff00ff;
+        color: #ff00ff;
+    }
+
+    .wr-btn.magenta:hover {
+        background: #ff00ff;
+        color: #05070a;
+    }
+
+    .wr-shell {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 12px;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    @media (max-width: 1050px) {
+        .wr-shell {
+            grid-template-columns: 1fr;
+            overflow: auto;
+        }
+    }
+
+    .wr-panel {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 5px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-height: 0;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    .wr-title {
+        color: #ffd700;
+        font-size: 0.76rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 5px;
+    }
+
+    .wr-input {
+        width: 100%;
+        box-sizing: border-box;
+        background: #05070a;
+        color: #c9d1d9;
+        border: 1px solid #30363d;
+        padding: 7px;
+        font-family: inherit;
+        font-size: 0.76rem;
+        outline: none;
+    }
+
+    .wr-input:focus {
+        border-color: #00ffcc;
+    }
+
+    .wr-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .wr-layer-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+
+    .wr-check {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: #05070a;
+        border: 1px solid #30363d;
+        padding: 6px;
+        font-size: 0.7rem;
+    }
+
+    .wr-check input {
+        accent-color: #00ffcc;
+    }
+
+    .wr-timebox,
+    .wr-readout {
+        background: #05070a;
+        border: 1px solid #30363d;
+        padding: 8px;
+        display: grid;
+        gap: 6px;
+    }
+
+    .wr-slider {
+        width: 100%;
+        accent-color: #00ffcc;
+    }
+
+    .wr-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        border-bottom: 1px dotted rgba(139,148,158,0.25);
+        padding-bottom: 3px;
+        font-size: 0.7rem;
+    }
+
+    .wr-row span:first-child {
+        color: #8b949e;
+    }
+
+    .wr-row strong {
+        color: #00ffcc;
+        text-align: right;
+    }
+
+    .wr-status {
+        min-height: 16px;
+        text-align: center;
+        color: #ffd700;
+        font-size: 0.7rem;
+        flex-shrink: 0;
+    }
+
+    .wr-chart {
+        height: 105px;
+        min-height: 105px;
+        background: #05070a;
+        border: 1px solid #30363d;
+        flex-shrink: 0;
+    }
+
+    .wr-chart canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    .wr-map-wrap {
+        position: relative;
+        height: 390px;
+        min-height: 390px;
+        max-height: 390px;
+        background: #05070a;
+        border: 1px solid #30363d;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    .wr-map {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+        background: #020409;
+        cursor: grab;
+        user-select: none;
+    }
+
+    .wr-map.dragging {
+        cursor: grabbing;
+    }
+
+    .wr-tile-layer,
+    .wr-radar-layer,
+    .wr-overlay-layer {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+    }
+
+    /* ACHTUNG: Breite und Höhe der Kacheln wird nun durch JS (für den Overzoom) gesteuert! */
+    .wr-tile,
+    .wr-radar-tile {
+        position: absolute;
+        image-rendering: auto;
+        user-select: none;
+        pointer-events: none;
+    }
+
+    .wr-radar-tile {
+        opacity: 0.68;
+        mix-blend-mode: screen;
+    }
+
+    .wr-marker {
+        position: absolute;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: #ff00ff;
+        border: 2px solid #fff;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 14px #ff00ff;
+        z-index: 30;
+    }
+
+    .wr-bubble {
+        position: absolute;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 20;
+    }
+
+    .wr-wind {
+        position: absolute;
+        transform-origin: left center;
+        background: #ff00ff;
+        box-shadow: 0 0 10px #ff00ff;
+        z-index: 25;
+        pointer-events: none;
+    }
+
+    .wr-map-tools {
+        position: absolute;
+        z-index: 80;
+        top: 12px;
+        left: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        max-width: calc(100% - 24px);
+    }
+
+    .wr-chip {
+        background: rgba(5,7,10,0.92);
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        padding: 7px 10px;
+        font-size: 0.72rem;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+    }
+
+    .wr-chip strong {
+        color: #00ffcc;
+    }
+
+    .wr-map-controls {
+        position: absolute;
+        z-index: 90;
+        top: 12px;
+        right: 12px;
+        display: grid;
+        gap: 6px;
+    }
+
+    .wr-map-controls button {
+        width: 36px;
+        height: 32px;
+        background: rgba(5,7,10,0.95);
+        color: #00ffcc;
+        border: 1px solid #30363d;
+        font-family: inherit;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .wr-map-controls button:hover {
+        border-color: #00ffcc;
+    }
+
+    .wr-legend {
+        position: absolute;
+        z-index: 80;
+        right: 12px;
+        bottom: 12px;
+        max-width: 310px;
+        background: rgba(5,7,10,0.92);
+        border: 1px solid #30363d;
+        padding: 9px;
+        color: #c9d1d9;
+        font-size: 0.68rem;
+        line-height: 1.45;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+    }
+
+    .wr-dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+
+    .dot-radar { background: #00b7ff; }
+    .dot-cloud { background: #c9d1d9; }
+    .dot-uv { background: #b26cff; }
+    .dot-humidity { background: #00ffcc; }
+    .dot-solar { background: #ffd700; }
+</style>
+
+<div class="wr-module">
+    <div class="wr-header">
+        <div>
+            <h3 data-wi18n="title">GLOBAL WEATHER RADAR / 48H FORECAST</h3>
+            <div class="wr-subtitle" data-wi18n="subtitle">Weltkarte | Radar-Animation | Wolken | UV | Luftfeuchtigkeit | Sonneneinstrahlung | 48h Vorschau</div>
+        </div>
+    </div>
+
+    <div class="wr-shell">
+        <div class="wr-panel">
+            <div class="wr-title" data-wi18n="location_title">Ort / Region</div>
+
+            <input class="wr-input" id="wr-city" data-wi18n-ph="city_ph" placeholder="Stadt, z. B. Berlin">
+            <input class="wr-input" id="wr-state" data-wi18n-ph="state_ph" placeholder="Staat / Bundesland optional, z. B. Bayern">
+            <input class="wr-input" id="wr-country" data-wi18n-ph="country_ph" placeholder="Land optional, z. B. Deutschland">
+
+            <div class="wr-grid-2">
+                <button class="wr-btn" id="wr-search" data-wi18n="btn_search">Suchen</button>
+                <button class="wr-btn gold" id="wr-world" data-wi18n="btn_world">Welt</button>
+            </div>
+
+            <div class="wr-title" data-wi18n="layers_title">Wetter-Layer</div>
+
+            <div class="wr-layer-grid">
+                <label class="wr-check"><input type="checkbox" id="layer-radar" checked><span data-wi18n="layer_radar">Radar</span></label>
+                <label class="wr-check"><input type="checkbox" id="layer-clouds" checked><span data-wi18n="layer_clouds">Wolken</span></label>
+                <label class="wr-check"><input type="checkbox" id="layer-uv" checked><span data-wi18n="layer_uv">UV-Index</span></label>
+                <label class="wr-check"><input type="checkbox" id="layer-humidity" checked><span data-wi18n="layer_humidity">Feuchtigkeit</span></label>
+                <label class="wr-check"><input type="checkbox" id="layer-solar" checked><span data-wi18n="layer_solar">Sonne</span></label>
+                <label class="wr-check"><input type="checkbox" id="layer-wind" checked><span data-wi18n="layer_wind">Wind</span></label>
+            </div>
+
+            <div class="wr-grid-2">
+                <button class="wr-btn magenta" id="wr-play-radar" data-wi18n="btn_play">Radar starten</button>
+                <button class="wr-btn" id="wr-refresh" data-wi18n="btn_refresh">Aktualisieren</button>
+            </div>
+
+            <div class="wr-title" data-wi18n="preview_title">48 Stunden Vorschau</div>
+
+            <div class="wr-timebox">
+                <input class="wr-slider" type="range" min="0" max="47" value="0" id="wr-hour">
+                <div class="wr-row"><span data-wi18n="selected_hour">Ausgewählte Stunde</span><strong id="wr-hour-label">--</strong></div>
+            </div>
+
+            <div class="wr-title" data-wi18n="readout_title">Aktuelles / gewähltes Wetter</div>
+
+            <div class="wr-readout">
+                <div class="wr-row"><span data-wi18n="loc">Ort</span><strong id="ro-location">Welt</strong></div>
+                <div class="wr-row"><span data-wi18n="temp">Temperatur</span><strong id="ro-temp">--</strong></div>
+                <div class="wr-row"><span data-wi18n="humidity">Luftfeuchtigkeit</span><strong id="ro-humidity">--</strong></div>
+                <div class="wr-row"><span data-wi18n="clouds">Bewölkung</span><strong id="ro-clouds">--</strong></div>
+                <div class="wr-row"><span data-wi18n="uv">UV-Index</span><strong id="ro-uv">--</strong></div>
+                <div class="wr-row"><span data-wi18n="solar">Sonneneinstrahlung</span><strong id="ro-solar">--</strong></div>
+                <div class="wr-row"><span data-wi18n="rain_prob">Regenwahrscheinlichkeit</span><strong id="ro-rainprob">--</strong></div>
+                <div class="wr-row"><span data-wi18n="wind">Wind</span><strong id="ro-wind">--</strong></div>
+                <div class="wr-row"><span data-wi18n="pressure">Luftdruck</span><strong id="ro-pressure">--</strong></div>
+                <div class="wr-row"><span data-wi18n="visibility">Sichtweite</span><strong id="ro-visibility">--</strong></div>
+            </div>
+
+            <div class="wr-title" data-wi18n="chart_title">48h Kurve</div>
+            <div class="wr-chart"><canvas id="wr-chart"></canvas></div>
+
+            <div class="wr-status" id="wr-status" data-wi18n="status_ready">Bereit. Weltkarte aktiv.</div>
+        </div>
+
+        <div class="wr-map-wrap">
+            <div class="wr-map" id="wr-map">
+                <div class="wr-tile-layer" id="wr-base-layer"></div>
+                <div class="wr-radar-layer" id="wr-radar-layer"></div>
+                <div class="wr-overlay-layer" id="wr-overlay-layer"></div>
+            </div>
+
+            <div class="wr-map-tools">
+                <div class="wr-chip"><span data-wi18n="radar_frame">Radarbild</span>: <strong id="wr-radar-frame">--</strong></div>
+                <div class="wr-chip"><span data-wi18n="forecast_frame">Vorhersage-Stunde</span>: <strong id="wr-forecast-frame">--</strong></div>
+            </div>
+
+            <div class="wr-map-controls">
+                <button id="wr-zoom-in">+</button>
+                <button id="wr-zoom-out">−</button>
+            </div>
+
+            <div class="wr-legend">
+                <div><span class="wr-dot dot-radar"></span><span data-wi18n="legend_radar">Radar: animierte Niederschlags-Kacheln</span></div>
+                <div><span class="wr-dot dot-cloud"></span><span data-wi18n="legend_cloud">Wolken: Bewölkungs-Kreis am gewählten Ort</span></div>
+                <div><span class="wr-dot dot-uv"></span><span data-wi18n="legend_uv">UV: UV-Kreis am gewählten Ort</span></div>
+                <div><span class="wr-dot dot-humidity"></span><span data-wi18n="legend_humidity">Feuchtigkeit: Feuchtigkeits-Kreis am gewählten Ort</span></div>
+                <div><span class="wr-dot dot-solar"></span><span data-wi18n="legend_solar">Sonne: Strahlungs-Kreis am gewählten Ort</span></div>
+                <div style="margin-top:6px;color:#8b949e;" data-wi18n="legend_note">Ohne Stadt bleibt das Modul im globalen Radar-Kartenmodus.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    const root = typeof shadowRoot !== "undefined" ? shadowRoot : document;
+    const $ = id => root.getElementById(id);
+
+    const I18N = {
+        lang: localStorage.getItem("arte_lang_pref") || "de",
+        dict: {
+            de: {
+                title: "GLOBAL WEATHER RADAR / 48H FORECAST",
+                subtitle: "Weltkarte | Radar-Animation | Wolken | UV | Luftfeuchtigkeit | Sonneneinstrahlung | 48h Vorschau",
+                location_title: "Ort / Region",
+                city_ph: "Stadt, z. B. Berlin",
+                state_ph: "Staat / Bundesland optional, z. B. Bayern",
+                country_ph: "Land optional, z. B. Deutschland",
+                btn_search: "Suchen",
+                btn_world: "Welt",
+                layers_title: "Wetter-Layer",
+                layer_radar: "Radar",
+                layer_clouds: "Wolken",
+                layer_uv: "UV-Index",
+                layer_humidity: "Feuchtigkeit",
+                layer_solar: "Sonne",
+                layer_wind: "Wind",
+                btn_play: "Radar starten",
+                btn_pause: "Radar stoppen",
+                btn_refresh: "Aktualisieren",
+                preview_title: "48 Stunden Vorschau",
+                selected_hour: "Ausgewählte Stunde",
+                readout_title: "Aktuelles / gewähltes Wetter",
+                loc: "Ort",
+                temp: "Temperatur",
+                humidity: "Luftfeuchtigkeit",
+                clouds: "Bewölkung",
+                uv: "UV-Index",
+                solar: "Sonneneinstrahlung",
+                rain_prob: "Regenwahrscheinlichkeit",
+                wind: "Wind",
+                pressure: "Luftdruck",
+                visibility: "Sichtweite",
+                chart_title: "48h Kurve",
+                radar_frame: "Radarbild",
+                forecast_frame: "Vorhersage-Stunde",
+                legend_radar: "Radar: animierte Niederschlags-Kacheln",
+                legend_cloud: "Wolken: Bewölkungs-Kreis am gewählten Ort",
+                legend_uv: "UV: UV-Kreis am gewählten Ort",
+                legend_humidity: "Feuchtigkeit: Feuchtigkeits-Kreis am gewählten Ort",
+                legend_solar: "Sonne: Strahlungs-Kreis am gewählten Ort",
+                legend_note: "Ohne Stadt bleibt das Modul im globalen Radar-Kartenmodus.",
+                status_ready: "Bereit. Weltkarte aktiv.",
+                status_loading_radar: "Lade Radar-Daten...",
+                status_radar_ok: "Radar-Daten geladen.",
+                status_radar_fail: "Radar konnte nicht geladen werden.",
+                status_loading_weather: "Lade Wetterdaten...",
+                status_weather_ok: "Wetterdaten geladen.",
+                status_weather_fail: "Wetterdaten konnten nicht geladen werden.",
+                status_no_city: "Keine Stadt gefunden.",
+                world: "Welt",
+                now: "Jetzt"
+            },
+            en: {
+                title: "GLOBAL WEATHER RADAR / 48H FORECAST",
+                subtitle: "World map | radar animation | clouds | UV | humidity | solar radiation | 48h preview",
+                location_title: "Location / Region",
+                city_ph: "City, e.g. Berlin",
+                state_ph: "State / region optional, e.g. Bavaria",
+                country_ph: "Country optional, e.g. Germany",
+                btn_search: "Search",
+                btn_world: "World",
+                layers_title: "Weather layers",
+                layer_radar: "Radar",
+                layer_clouds: "Clouds",
+                layer_uv: "UV index",
+                layer_humidity: "Humidity",
+                layer_solar: "Solar",
+                layer_wind: "Wind",
+                btn_play: "Play radar",
+                btn_pause: "Pause radar",
+                btn_refresh: "Refresh",
+                preview_title: "48 hour preview",
+                selected_hour: "Selected hour",
+                readout_title: "Current / selected weather",
+                loc: "Location",
+                temp: "Temperature",
+                humidity: "Humidity",
+                clouds: "Cloud cover",
+                uv: "UV index",
+                solar: "Solar radiation",
+                rain_prob: "Rain probability",
+                wind: "Wind",
+                pressure: "Pressure",
+                visibility: "Visibility",
+                chart_title: "48h curve",
+                radar_frame: "Radar frame",
+                forecast_frame: "Forecast hour",
+                legend_radar: "Radar: animated precipitation tiles",
+                legend_cloud: "Clouds: selected-location cloud cover bubble",
+                legend_uv: "UV: selected-location UV radius",
+                legend_humidity: "Humidity: selected-location humidity radius",
+                legend_solar: "Solar: shortwave radiation radius",
+                legend_note: "Without a city, the module stays in global radar map mode.",
+                status_ready: "Ready. World map active.",
+                status_loading_radar: "Loading radar data...",
+                status_radar_ok: "Radar data loaded.",
+                status_radar_fail: "Radar could not be loaded.",
+                status_loading_weather: "Loading weather data...",
+                status_weather_ok: "Weather data loaded.",
+                status_weather_fail: "Weather data could not be loaded.",
+                status_no_city: "No city found.",
+                world: "World",
+                now: "Now"
+            }
+        },
+        t(key){
+            return (this.dict[this.lang] && this.dict[this.lang][key]) || key;
+        },
+        apply(){
+            root.querySelectorAll("[data-wi18n]").forEach(el => {
+                el.innerHTML = this.t(el.getAttribute("data-wi18n"));
+            });
+
+            root.querySelectorAll("[data-wi18n-ph]").forEach(el => {
+                el.placeholder = this.t(el.getAttribute("data-wi18n-ph"));
+            });
+
+            const play = $("wr-play-radar");
+            if (play) {
+                play.innerHTML = radarPlaying ? this.t("btn_pause") : this.t("btn_play");
+            }
+        }
+    };
+
+    const E = {};
+    [
+        "wr-map","wr-base-layer","wr-radar-layer","wr-overlay-layer",
+        "wr-city","wr-state","wr-country","wr-search","wr-world","wr-play-radar","wr-refresh",
+        "wr-hour","wr-hour-label","wr-radar-frame","wr-forecast-frame","wr-status",
+        "ro-location","ro-temp","ro-humidity","ro-clouds","ro-uv","ro-solar","ro-rainprob","ro-wind","ro-pressure","ro-visibility",
+        "layer-radar","layer-clouds","layer-uv","layer-humidity","layer-solar","layer-wind",
+        "wr-chart","wr-zoom-in","wr-zoom-out"
+    ].forEach(id => E[id] = $(id));
+
+    let mapState = {
+        lat: 20,
+        lon: 0,
+        zoom: 2,
+        dragging: false,
+        startX: 0,
+        startY: 0,
+        startCenter: null
+    };
+
+    let radarHost = "";
+    let radarFrames = [];
+    let radarIndex = 0;
+    let radarPlaying = false;
+    let radarTimer = null;
+    let selected = null;
+    let forecast = null;
+    let selectedHour = 0;
+
+    function status(key){
+        E["wr-status"].textContent = I18N.t(key);
+    }
+
+    function clamp(v, a, b){
+        return Math.max(a, Math.min(b, v));
+    }
+
+    function lonToX(lon, z){
+        return ((lon + 180) / 360) * 256 * Math.pow(2, z);
+    }
+
+    function latToY(lat, z){
+        const s = Math.sin(lat * Math.PI / 180);
+        return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * 256 * Math.pow(2, z);
+    }
+
+    function xToLon(x, z){
+        return x / (256 * Math.pow(2, z)) * 360 - 180;
+    }
+
+    function yToLat(y, z){
+        const n = Math.PI - 2 * Math.PI * y / (256 * Math.pow(2, z));
+        return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+    }
+
+    function latLonToScreen(lat, lon){
+        const rect = E["wr-map"].getBoundingClientRect();
+        const centerX = lonToX(mapState.lon, mapState.zoom);
+        const centerY = latToY(mapState.lat, mapState.zoom);
+
+        const x = lonToX(lon, mapState.zoom) - centerX + rect.width / 2;
+        const y = latToY(lat, mapState.zoom) - centerY + rect.height / 2;
+
+        return { x, y };
+    }
+
+    function screenDeltaToCenter(dx, dy){
+        const centerX = lonToX(mapState.lon, mapState.zoom) - dx;
+        const centerY = latToY(mapState.lat, mapState.zoom) - dy;
+
+        mapState.lon = xToLon(centerX, mapState.zoom);
+        mapState.lat = clamp(yToLat(centerY, mapState.zoom), -84, 84);
+    }
+
+    function renderMap(){
+        renderBaseTiles();
+        renderRadarTiles();
+        renderWeatherOverlays();
+    }
+
+    // --- DER OVERZOOM-ALGORITHMUS FÜR DIE KARTEN-KACHELN ---
+    // Diese Funktion skaliert Kacheln mathematisch hoch, wenn das maxZoom-Limit der API erreicht ist.
+    function renderTileLayer(layer, urlFactory, className, maxZoom = 20){
+        layer.innerHTML = "";
+
+        const rect = E["wr-map"].getBoundingClientRect();
+        let z = mapState.zoom;
+        let scale = 1;
+
+        // Wenn wir tiefer zoomen als die API erlaubt (z.B. > 7 bei RainViewer)
+        if (z > maxZoom) {
+            scale = Math.pow(2, z - maxZoom);
+            z = maxZoom;
+        }
+
+        const n = Math.pow(2, z);
+        const centerX = lonToX(mapState.lon, z);
+        const centerY = latToY(mapState.lat, z);
+
+        const startX = centerX - (rect.width / 2) / scale;
+        const startY = centerY - (rect.height / 2) / scale;
+
+        const tileStartX = Math.floor(startX / 256) - 1;
+        const tileEndX = Math.floor((startX + (rect.width / scale)) / 256) + 1;
+        const tileStartY = Math.floor(startY / 256) - 1;
+        const tileEndY = Math.floor((startY + (rect.height / scale)) / 256) + 1;
+
+        const tileSize = 256 * scale; // Das skaliert die 256px Kachel entsprechend hoch
+
+        for (let tx = tileStartX; tx <= tileEndX; tx++) {
+            for (let ty = tileStartY; ty <= tileEndY; ty++) {
+                if (ty < 0 || ty >= n) continue;
+
+                const wrappedX = ((tx % n) + n) % n;
+                const url = urlFactory(z, wrappedX, ty);
+                if (!url) continue;
+
+                const img = document.createElement("img");
+                img.className = className;
+                img.src = url;
+                img.loading = "lazy";
+                img.decoding = "async";
+                
+                // Dynamische Anpassung durch JS anstatt festes CSS
+                img.style.width = `${tileSize}px`;
+                img.style.height = `${tileSize}px`;
+                img.style.left = `${(tx * 256 - startX) * scale}px`;
+                img.style.top = `${(ty * 256 - startY) * scale}px`;
+                
+                img.onerror = function(){
+                    img.style.display = "none";
+                };
+
+                layer.appendChild(img);
+            }
+        }
+    }
+
+    function renderBaseTiles(){
+        renderTileLayer(E["wr-base-layer"], function(z, x, y){
+            return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+        }, "wr-tile", 18); // OSM geht bis Zoom 18
+    }
+
+    function renderRadarTiles(){
+        E["wr-radar-layer"].innerHTML = "";
+
+        if (!E["layer-radar"].checked || !radarFrames.length || !radarHost) return;
+
+        const frame = radarFrames[radarIndex];
+        if (!frame) return;
+
+        renderTileLayer(E["wr-radar-layer"], function(z, x, y){
+            // Rainviewer limitiert auf Stufe 7. Der Overzoom (scale) übernimmt ab hier!
+            return `${radarHost}${frame.path}/256/${z}/${x}/${y}/2/1_1.png`;
+        }, "wr-radar-tile", 7);
+
+        E["wr-radar-frame"].textContent = new Date(frame.time * 1000).toLocaleString();
+    }
+
+    function setWorld(){
+        selected = null;
+        forecast = null;
+
+        mapState.lat = 20;
+        mapState.lon = 0;
+        mapState.zoom = 2;
+
+        E["ro-location"].textContent = I18N.t("world");
+
+        [
+            "ro-temp",
+            "ro-humidity",
+            "ro-clouds",
+            "ro-uv",
+            "ro-solar",
+            "ro-rainprob",
+            "ro-wind",
+            "ro-pressure",
+            "ro-visibility"
+        ].forEach(id => {
+            E[id].textContent = "--";
+        });
+
+        E["wr-hour-label"].textContent = "--";
+        E["wr-forecast-frame"].textContent = "--";
+
+        clearChart();
+        renderMap();
+        status("status_ready");
+    }
+
+    async function loadRadar(){
+        try {
+            status("status_loading_radar");
+
+            const res = await fetch("https://api.rainviewer.com/public/weather-maps.json", {
+                cache: "no-store"
+            });
+
+            const data = await res.json();
+
+            radarHost = data.host || "";
+            radarFrames = data.radar && data.radar.past ? data.radar.past : [];
+            radarIndex = Math.max(0, radarFrames.length - 1);
+
+            renderRadarTiles();
+            status("status_radar_ok");
+        } catch(err) {
+            console.warn(err);
+            status("status_radar_fail");
+        }
+    }
+
+    function toggleRadar(){
+        radarPlaying = !radarPlaying;
+
+        E["wr-play-radar"].innerHTML = radarPlaying ? I18N.t("btn_pause") : I18N.t("btn_play");
+
+        if (radarTimer) {
+            clearInterval(radarTimer);
+            radarTimer = null;
+        }
+
+        if (radarPlaying) {
+            radarTimer = setInterval(function(){
+                if (!radarFrames.length) return;
+
+                radarIndex = (radarIndex + 1) % radarFrames.length;
+                renderRadarTiles();
+            }, 900);
+        }
+    }
+
+    async function searchCity(){
+        const city = E["wr-city"].value.trim();
+        const state = E["wr-state"].value.trim();
+        const country = E["wr-country"].value.trim();
+
+        if (!city && !state && !country) {
+            setWorld();
+            return;
+        }
+
+        const q = [city, state, country].filter(Boolean).join(" ");
+        status("status_loading_weather");
+
+        try {
+            const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=${I18N.lang}&format=json`;
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (!data.results || !data.results.length) {
+                status("status_no_city");
+                return;
+            }
+
+            let r = data.results[0];
+
+            if (country) {
+                const c = country.toLowerCase();
+                const match = data.results.find(x =>
+                    (x.country && x.country.toLowerCase().includes(c)) ||
+                    (x.country_code && x.country_code.toLowerCase() === c)
+                );
+
+                if (match) r = match;
+            }
+
+            selected = {
+                name: [r.name, r.admin1, r.country].filter(Boolean).join(", "),
+                lat: r.latitude,
+                lon: r.longitude
+            };
+
+            mapState.lat = selected.lat;
+            mapState.lon = selected.lon;
+            mapState.zoom = 5;
+
+            renderMap();
+            await loadWeather();
+        } catch(err) {
+            console.warn(err);
+            status("status_weather_fail");
+        }
+    }
+
+    async function loadWeather(){
+        if (!selected) return;
+
+        status("status_loading_weather");
+
+        const hourly = [
+            "temperature_2m",
+            "relative_humidity_2m",
+            "cloud_cover",
+            "precipitation_probability",
+            "precipitation",
+            "rain",
+            "showers",
+            "snowfall",
+            "wind_speed_10m",
+            "wind_direction_10m",
+            "uv_index",
+            "shortwave_radiation",
+            "visibility",
+            "surface_pressure"
+        ].join(",");
+
+        const current = [
+            "temperature_2m",
+            "relative_humidity_2m",
+            "apparent_temperature",
+            "precipitation",
+            "rain",
+            "showers",
+            "snowfall",
+            "weather_code",
+            "cloud_cover",
+            "wind_speed_10m",
+            "wind_gusts_10m",
+            "surface_pressure"
+        ].join(",");
+
+        try {
+            const url =
+                `https://api.open-meteo.com/v1/forecast?latitude=${selected.lat}&longitude=${selected.lon}` +
+                `&current=${current}&hourly=${hourly}&forecast_days=3&timezone=auto`;
+
+            const res = await fetch(url);
+            forecast = await res.json();
+
+            // Berechnung der "Jetzt" Stunde
+            let startIndex = 0;
+            if (forecast.current && forecast.current.time) {
+                const curTime = new Date(forecast.current.time).getTime();
+                let minDiff = Infinity;
+                for (let i = 0; i < forecast.hourly.time.length; i++) {
+                    const t = new Date(forecast.hourly.time[i]).getTime();
+                    const diff = Math.abs(t - curTime);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        startIndex = i;
+                    }
+                }
+            }
+
+            E["wr-hour"].min = startIndex;
+            E["wr-hour"].max = Math.min(startIndex + 47, forecast.hourly.time.length - 1);
+            E["wr-hour"].value = startIndex;
+            selectedHour = startIndex;
+
+            updateForecast();
+            drawChart();
+            status("status_weather_ok");
+        } catch(err) {
+            console.warn(err);
+            status("status_weather_fail");
+        }
+    }
+
+    function getH(key, i){
+        return forecast && forecast.hourly && forecast.hourly[key] ? forecast.hourly[key][i] : null;
+    }
+
+    function updateForecast(){
+        if (!forecast || !selected) return;
+
+        selectedHour = Number(E["wr-hour"].value || 0);
+
+        const i = selectedHour;
+        const time = getH("time", i);
+        const temp = getH("temperature_2m", i);
+        const rh = getH("relative_humidity_2m", i);
+        const clouds = getH("cloud_cover", i);
+        const uv = getH("uv_index", i);
+        const solar = getH("shortwave_radiation", i);
+        const rainProb = getH("precipitation_probability", i);
+        const wind = getH("wind_speed_10m", i);
+        const windDir = getH("wind_direction_10m", i);
+        const pressure = getH("surface_pressure", i);
+        const visibility = getH("visibility", i);
+
+        const dateText = time ? new Date(time).toLocaleString() : "--";
+        const relativeHour = i - (Number(E["wr-hour"].min) || 0);
+
+        E["wr-hour-label"].textContent = `+${relativeHour}h | ${dateText}`;
+        E["wr-forecast-frame"].textContent = `+${relativeHour}h`;
+        E["ro-location"].textContent = selected.name;
+        E["ro-temp"].textContent = temp == null ? "--" : `${Number(temp).toFixed(1)} °C`;
+        E["ro-humidity"].textContent = rh == null ? "--" : `${rh}%`;
+        E["ro-clouds"].textContent = clouds == null ? "--" : `${clouds}%`;
+        E["ro-uv"].textContent = uv == null ? "--" : `${Number(uv).toFixed(1)}`;
+        E["ro-solar"].textContent = solar == null ? "--" : `${Math.round(solar)} W/m²`;
+        E["ro-rainprob"].textContent = rainProb == null ? "--" : `${rainProb}%`;
+        E["ro-wind"].textContent = wind == null ? "--" : `${Number(wind).toFixed(1)} km/h ${windDir == null ? "" : Math.round(windDir) + "°"}`;
+        E["ro-pressure"].textContent = pressure == null ? "--" : `${Number(pressure).toFixed(0)} hPa`;
+        E["ro-visibility"].textContent = visibility == null ? "--" : `${(Number(visibility) / 1000).toFixed(1)} km`;
+
+        renderWeatherOverlays();
+        drawChart();
+    }
+
+    function renderWeatherOverlays(){
+        E["wr-overlay-layer"].innerHTML = "";
+
+        if (!selected || !forecast) return;
+
+        const i = selectedHour;
+        const p = latLonToScreen(selected.lat, selected.lon);
+
+        addMarker(p.x, p.y);
+
+        const clouds = getH("cloud_cover", i);
+        const uv = getH("uv_index", i);
+        const rh = getH("relative_humidity_2m", i);
+        const solar = getH("shortwave_radiation", i);
+        const wind = getH("wind_speed_10m", i);
+        const windDir = getH("wind_direction_10m", i);
+
+        // Skalierungsfaktor für Blasen basierend auf Zoomstufe
+        const zScale = Math.max(1, mapState.zoom / 4);
+
+        if (E["layer-clouds"].checked && clouds != null) {
+            addBubble(p.x, p.y, (80 + clouds * 2) * zScale, "#c9d1d9", Math.min(0.20 + clouds / 150, 0.8));
+        }
+
+        if (E["layer-uv"].checked && uv != null) {
+            addBubble(p.x, p.y, (60 + Number(uv) * 25) * zScale, "#b26cff", Math.min(0.22 + Number(uv) / 15, 0.85));
+        }
+
+        if (E["layer-humidity"].checked && rh != null) {
+            addBubble(p.x, p.y, (65 + Number(rh) * 1.5) * zScale, "#00ffcc", Math.min(0.20 + Number(rh) / 180, 0.8));
+        }
+
+        if (E["layer-solar"].checked && solar != null) {
+            addBubble(p.x, p.y, (50 + Number(solar) * 0.2) * zScale, "#ffd700", Math.min(0.18 + Number(solar) / 1200, 0.8));
+        }
+
+        if (E["layer-wind"].checked && wind != null && windDir != null) {
+            addWind(p.x, p.y, Number(wind), Number(windDir), zScale);
+        }
+    }
+
+    function addMarker(x, y){
+        const m = document.createElement("div");
+        m.className = "wr-marker";
+        m.style.left = `${x}px`;
+        m.style.top = `${y}px`;
+        E["wr-overlay-layer"].appendChild(m);
+    }
+
+    function addBubble(x, y, size, color, opacity){
+        const b = document.createElement("div");
+        b.className = "wr-bubble";
+        b.style.left = `${x}px`;
+        b.style.top = `${y}px`;
+        b.style.width = `${size}px`;
+        b.style.height = `${size}px`;
+        b.style.border = `3px solid ${color}`;
+        b.style.background = `radial-gradient(circle, ${color}80 0%, ${color}20 60%, transparent 100%)`;
+        b.style.opacity = Math.min(1, opacity + 0.3); // Stärkeres Glow
+        b.style.boxShadow = `0 0 30px ${color}`;
+        E["wr-overlay-layer"].appendChild(b);
+    }
+
+    function addWind(x, y, speed, dir, zScale){
+        const w = document.createElement("div");
+        w.className = "wr-wind";
+        w.style.left = `${x}px`;
+        w.style.top = `${y}px`;
+        w.style.width = `${(60 + speed * 3) * zScale}px`;
+        w.style.height = `${3 * zScale}px`;
+        w.style.transform = `rotate(${dir - 90}deg)`;
+        E["wr-overlay-layer"].appendChild(w);
+    }
+
+    function drawChart(){
+        const c = E["wr-chart"];
+        const ctx = c.getContext("2d");
+        const rect = c.getBoundingClientRect();
+
+        c.width = Math.max(1, Math.round(rect.width || 320));
+        c.height = Math.max(1, Math.round(rect.height || 105));
+
+        ctx.fillStyle = "#05070a";
+        ctx.fillRect(0, 0, c.width, c.height);
+
+        if (!forecast || !forecast.hourly) return;
+
+        const safeStart = Number(E["wr-hour"].min) || 0;
+        const endIdx = safeStart + 48;
+        
+        const temps = forecast.hourly.temperature_2m.slice(safeStart, endIdx);
+        const rain = forecast.hourly.precipitation_probability.slice(safeStart, endIdx);
+        const clouds = forecast.hourly.cloud_cover.slice(safeStart, endIdx);
+
+        ctx.strokeStyle = "#30363d";
+        ctx.lineWidth = 1;
+
+        for (let i = 1; i < 4; i++) {
+            const y = (c.height / 4) * i;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(c.width, y);
+            ctx.stroke();
+        }
+
+        drawLine(ctx, temps, "#00ffcc", true, c.width, c.height);
+        drawLine(ctx, rain, "#00b7ff", false, c.width, c.height);
+        drawLine(ctx, clouds, "#c9d1d9", false, c.width, c.height);
+
+        const relativeHour = clamp(selectedHour - safeStart, 0, 47);
+        const x = (relativeHour / 47) * c.width;
+
+        ctx.strokeStyle = "#ffd700";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, c.height);
+        ctx.stroke();
+
+        ctx.fillStyle = "#00ffcc";
+        ctx.font = "11px Courier";
+        ctx.fillText("T", 8, 14);
+
+        ctx.fillStyle = "#00b7ff";
+        ctx.fillText("P%", 28, 14);
+
+        ctx.fillStyle = "#c9d1d9";
+        ctx.fillText("C%", 58, 14);
+    }
+
+    function drawLine(ctx, arr, color, autoScale, w, h){
+        const values = arr.map(Number).filter(v => !isNaN(v));
+        if (!values.length) return;
+
+        let min = autoScale ? Math.min(...values) : 0;
+        let max = autoScale ? Math.max(...values) : 100;
+
+        if (min === max) max = min + 1;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        const len = arr.length - 1 || 1;
+        arr.forEach((v, i) => {
+            const x = (i / len) * w;
+            const y = h - ((Number(v) - min) / (max - min)) * (h - 22) - 10;
+
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+
+        ctx.stroke();
+    }
+
+    function clearChart(){
+        const c = E["wr-chart"];
+        const ctx = c.getContext("2d");
+        const rect = c.getBoundingClientRect();
+
+        c.width = Math.max(1, Math.round(rect.width || 320));
+        c.height = Math.max(1, Math.round(rect.height || 105));
+
+        ctx.fillStyle = "#05070a";
+        ctx.fillRect(0, 0, c.width, c.height);
+    }
+
+    function wire(){
+        E["wr-search"].addEventListener("click", searchCity);
+        E["wr-world"].addEventListener("click", setWorld);
+        E["wr-play-radar"].addEventListener("click", toggleRadar);
+
+        E["wr-refresh"].addEventListener("click", async () => {
+            await loadRadar();
+
+            if (selected) {
+                await loadWeather();
+            }
+        });
+
+        E["wr-hour"].addEventListener("input", updateForecast);
+
+        ["wr-city", "wr-state", "wr-country"].forEach(id => {
+            E[id].addEventListener("keydown", e => {
+                if (e.key === "Enter") {
+                    searchCity();
+                }
+            });
+        });
+
+        [
+            "layer-radar",
+            "layer-clouds",
+            "layer-uv",
+            "layer-humidity",
+            "layer-solar",
+            "layer-wind"
+        ].forEach(id => {
+            E[id].addEventListener("change", renderMap);
+        });
+
+        E["wr-zoom-in"].addEventListener("click", () => {
+            mapState.zoom = clamp(mapState.zoom + 1, 2, 12);
+            renderMap();
+        });
+
+        E["wr-zoom-out"].addEventListener("click", () => {
+            mapState.zoom = clamp(mapState.zoom - 1, 2, 12);
+            renderMap();
+        });
+
+        E["wr-map"].addEventListener("mousedown", e => {
+            mapState.dragging = true;
+            mapState.startX = e.clientX;
+            mapState.startY = e.clientY;
+            mapState.startCenter = {
+                lat: mapState.lat,
+                lon: mapState.lon
+            };
+
+            E["wr-map"].classList.add("dragging");
+        });
+
+        window.addEventListener("mousemove", e => {
+            if (!mapState.dragging) return;
+
+            mapState.lat = mapState.startCenter.lat;
+            mapState.lon = mapState.startCenter.lon;
+
+            screenDeltaToCenter(
+                e.clientX - mapState.startX,
+                e.clientY - mapState.startY
+            );
+
+            renderMap();
+        });
+
+        window.addEventListener("mouseup", () => {
+            mapState.dragging = false;
+            E["wr-map"].classList.remove("dragging");
+        });
+
+        E["wr-map"].addEventListener("wheel", e => {
+            e.preventDefault();
+
+            mapState.zoom = clamp(
+                mapState.zoom + (e.deltaY < 0 ? 1 : -1),
+                2,
+                12
+            );
+
+            renderMap();
+        }, { passive: false });
+
+        window.addEventListener("resize", renderMap);
+
+        if (window.osBus) {
+            window.osBus.on("lang-changed", newLang => {
+                I18N.lang = newLang;
+                localStorage.setItem("arte_lang_pref", newLang);
+                I18N.apply();
+
+                if (selected && forecast) {
+                    updateForecast();
+                } else {
+                    setWorld();
+                }
+            });
+        }
+    }
+
+    async function boot(){
+        wire();
+        I18N.apply();
+
+        setWorld();
+
+        setTimeout(renderMap, 80);
+        await loadRadar();
+        renderMap();
+    }
+
+    boot();
+})();
+</script>

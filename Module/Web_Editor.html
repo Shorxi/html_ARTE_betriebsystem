@@ -1,0 +1,843 @@
+<style>
+    .module-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        max-height: 850px;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        color: #c9d1d9;
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        position: relative;
+    }
+
+    .module-header {
+        border-bottom: 1px solid #30363d;
+        padding: 10px 15px;
+        background-color: #161b22;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .module-header h3 {
+        color: #00ffcc;
+        margin: 0;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    /* Kinetische & Sticky Werkzeugleiste */
+    .toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background-color: #161b22;
+        border-bottom: 1px solid #30363d;
+        padding: 8px 15px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .toolbar-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-right: 1px solid #30363d;
+        padding-right: 15px;
+    }
+
+    .toolbar-group:last-child {
+        border-right: none;
+    }
+
+    .btn-tool {
+        background: transparent;
+        border: 1px solid #00ffcc;
+        color: #00ffcc;
+        cursor: pointer;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        font-weight: bold;
+        border-radius: 3px;
+        transition: all 0.2s;
+    }
+
+    .btn-tool:hover {
+        background-color: #00ffcc;
+        color: #0d1117;
+    }
+
+    .btn-tool.export {
+        border-color: #ff00ff;
+        color: #ff00ff;
+    }
+
+    .btn-tool.export:hover {
+        background-color: #ff00ff;
+        color: #0d1117;
+    }
+
+    .btn-tool.import {
+        border-color: #ffd700;
+        color: #ffd700;
+    }
+
+    .btn-tool.import:hover {
+        background-color: #ffd700;
+        color: #0d1117;
+    }
+
+    input[type="text"] {
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        padding: 6px 10px;
+        font-size: 0.85rem;
+        border-radius: 3px;
+        width: 200px;
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: #00ffcc;
+    }
+
+    /* Checkbox Toggle für Live-Update */
+    .toggle-container {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.8rem;
+        color: #8b949e;
+        text-transform: uppercase;
+        cursor: pointer;
+    }
+
+    .toggle-container input {
+        cursor: pointer;
+        accent-color: #00ffcc;
+    }
+
+    /* Operations-Zentrale: Editor & Preview */
+    .editor-matrix {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    @media (max-width: 1024px) {
+        .editor-matrix {
+            grid-template-columns: 1fr;
+            grid-template-rows: 1fr 1fr;
+        }
+    }
+
+    /* Linker Sektor: Code Editor */
+    .code-pane {
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #30363d;
+        background-color: #0d1117;
+    }
+
+    .pane-label {
+        background-color: #161b22;
+        color: #8b949e;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-bottom: 1px solid #30363d;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    textarea#web-editor {
+        flex: 1;
+        background-color: #0d1117;
+        border: none;
+        color: #c9d1d9;
+        padding: 15px;
+        font-family: 'Courier New', Consolas, monospace;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        resize: none;
+        white-space: pre;
+        overflow-wrap: normal;
+        overflow-x: auto;
+    }
+
+    textarea#web-editor:focus {
+        outline: none;
+    }
+
+    textarea#web-editor.drag-active {
+        outline: 2px dashed #00ffcc;
+        outline-offset: -8px;
+        background-color: #111827;
+    }
+
+    /* Rechter Sektor: Live Preview */
+    .preview-pane {
+        display: flex;
+        flex-direction: column;
+        background-color: #ffffff;
+        position: relative;
+    }
+
+    /* Fullscreen Modus */
+    .preview-pane.fs-active {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 9999;
+        background-color: #ffffff;
+    }
+
+    /* Der zentrierte Schließen-Button */
+    #btn-close-fs {
+        display: none;
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #161b22;
+        color: #ff7b72;
+        border: 2px solid #ff7b72;
+        padding: 8px 25px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 10000;
+        border-radius: 4px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.2s;
+    }
+
+    #btn-close-fs:hover {
+        background-color: #ff7b72;
+        color: #0d1117;
+    }
+
+    .preview-pane.fs-active #btn-close-fs {
+        display: block;
+    }
+
+    iframe#live-preview {
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        border: none;
+        background-color: #ffffff;
+    }
+
+    input[type="file"] {
+        display: none;
+    }
+
+    .status-msg {
+        font-size: 0.75rem;
+        color: #ffd700;
+        text-transform: uppercase;
+    }
+</style>
+
+<div class="module-wrapper">
+    <div class="module-header">
+        <h3 data-mi18n="m_title">Live Web Synthesis Matrix</h3>
+        <span style="font-size: 0.75rem; color: #8b949e;" data-mi18n="m_desc">Omni-Format Web Editor, Real-Time Execution & Isolated Fullscreen</span>
+    </div>
+
+    <div class="toolbar" id="web-toolbar">
+        <div class="toolbar-group">
+            <input type="file" id="file-import" accept=".html,.htm,.css,.js,.txt">
+            <button class="btn-tool import" id="btn-import" data-mi18n="btn_import">📂 Code Laden</button>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="btn-tool" id="btn-run" title="Führt den Code im rechten Fenster aus" data-mi18n-title="t_run" data-mi18n="btn_run">▶ Rendern</button>
+
+            <label class="toggle-container" title="Automatisch aktualisieren beim Tippen" data-mi18n-title="t_live">
+                <input type="checkbox" id="toggle-live" checked>
+                <span data-mi18n="lbl_live">Live-Sync</span>
+            </label>
+        </div>
+
+        <div class="toolbar-group" style="margin-left: auto;">
+            <input type="text" id="doc-filename" value="arte_web_module" placeholder="Dateiname" data-mi18n-placeholder="ph_filename">
+            <button class="btn-tool export" id="btn-export" data-mi18n="btn_export">💾 .HTML Speichern</button>
+        </div>
+    </div>
+
+    <div class="editor-matrix">
+        <div class="code-pane">
+            <div class="pane-label">
+                <span data-mi18n="lbl_source">💻 Source Code (HTML / CSS / JS)</span>
+                <span id="char-count" style="color: #00ffcc;">0 Bytes</span>
+            </div>
+
+            <textarea id="web-editor" spellcheck="false"></textarea>
+        </div>
+
+        <div class="preview-pane" id="preview-pane">
+            <button id="btn-close-fs" data-mi18n="btn_close_fs">X Schließen</button>
+
+            <div class="pane-label" id="preview-header" style="background-color: #f0f0f0; color: #333; border-bottom: 1px solid #ccc;">
+                <span data-mi18n="lbl_preview">👁️ Live Viewport Output</span>
+                <span class="status-msg" id="render-status" style="color: #28a745;" data-mi18n="s_online">Online</span>
+            </div>
+
+            <iframe id="live-preview" sandbox="allow-scripts allow-same-origin"></iframe>
+        </div>
+    </div>
+</div>
+
+<script>
+    const root = typeof shadowRoot !== 'undefined' ? shadowRoot : document;
+
+    // ==========================================
+    // 1. STATISCHE & SICHERE i18n ÜBERSETZUNGS-ENGINE
+    // ==========================================
+    const mod_i18n = {
+        lang: localStorage.getItem('arte_lang_pref') || 'de',
+        dict: {
+            de: {
+                m_title: "Live Web Synthesis Matrix",
+                m_desc: "Omni-Format Web Editor, Real-Time Execution & Isolated Fullscreen",
+
+                btn_import: "📂 Code Laden",
+                btn_run: "▶ Rendern",
+                btn_export: "💾 .HTML Speichern",
+                btn_close_fs: "X Schließen",
+
+                t_run: "Führt den Code im rechten Fenster aus",
+                t_live: "Automatisch aktualisieren beim Tippen",
+
+                lbl_live: "Live-Sync",
+                lbl_source: "💻 Source Code (HTML / CSS / JS)",
+                lbl_preview: "👁️ Live Viewport Output",
+
+                ph_filename: "Dateiname",
+
+                s_online: "Online",
+                s_updated: "Aktualisiert",
+                s_loaded: "Geladen",
+                s_exported: "Exportiert",
+                s_drop_ready: "Datei hier ablegen",
+                s_drop_error: "Nur HTML, CSS, JS oder TXT Dateien möglich",
+
+                log_loaded_1: "Web Editor: '",
+                log_loaded_2: "' geladen.",
+                log_exported_1: "Web Editor: '",
+                log_exported_2: "' exportiert."
+            },
+            en: {
+                m_title: "Live Web Synthesis Matrix",
+                m_desc: "Omni-Format Web Editor, Real-Time Execution & Isolated Fullscreen",
+
+                btn_import: "📂 Load Code",
+                btn_run: "▶ Render",
+                btn_export: "💾 Save .HTML",
+                btn_close_fs: "X Close",
+
+                t_run: "Runs the code in the right-side preview window",
+                t_live: "Automatically refresh while typing",
+
+                lbl_live: "Live Sync",
+                lbl_source: "💻 Source Code (HTML / CSS / JS)",
+                lbl_preview: "👁️ Live Viewport Output",
+
+                ph_filename: "Filename",
+
+                s_online: "Online",
+                s_updated: "Updated",
+                s_loaded: "Loaded",
+                s_exported: "Exported",
+                s_drop_ready: "Drop file here",
+                s_drop_error: "Only HTML, CSS, JS or TXT files are supported",
+
+                log_loaded_1: "Web Editor: '",
+                log_loaded_2: "' loaded.",
+                log_exported_1: "Web Editor: '",
+                log_exported_2: "' exported."
+            }
+        },
+
+        t: function(key) {
+            return this.dict[this.lang][key] || key;
+        },
+
+        updateUI: function() {
+            root.querySelectorAll('[data-mi18n]').forEach(el => {
+                el.innerHTML = this.t(el.getAttribute('data-mi18n'));
+            });
+
+            root.querySelectorAll('[data-mi18n-title]').forEach(el => {
+                el.title = this.t(el.getAttribute('data-mi18n-title'));
+            });
+
+            root.querySelectorAll('[data-mi18n-placeholder]').forEach(el => {
+                el.placeholder = this.t(el.getAttribute('data-mi18n-placeholder'));
+            });
+
+            refreshRenderStatusLanguage();
+        }
+    };
+
+    // ==========================================
+    // 2. VORLAGEN: NUR DIE EINGEBAUTE VORGABE WECHSELT DIE SPRACHE
+    // ==========================================
+    const defaultTemplates = {
+        de: `<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>A.R.T.E. Test Modul</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .box {
+            background-color: #161b22;
+            border: 1px solid #00ffcc;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+            transition: transform 0.3s;
+        }
+
+        .box:hover {
+            transform: scale(1.05);
+        }
+
+        h1 {
+            color: #ff00ff;
+        }
+
+        .hint {
+            color: #ffd700;
+            font-size: 0.9rem;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>Vollbild Modus</h1>
+        <p>Sonderzeichen Test: Ä Ö Ü ß @ € µ</p>
+        <p class="hint">Tippe doppelt auf den Hintergrund, um in den Vollbildmodus zu wechseln.</p>
+    </div>
+</body>
+</html>`,
+
+        en: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>A.R.T.E. Test Module</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .box {
+            background-color: #161b22;
+            border: 1px solid #00ffcc;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+            transition: transform 0.3s;
+        }
+
+        .box:hover {
+            transform: scale(1.05);
+        }
+
+        h1 {
+            color: #ff00ff;
+        }
+
+        .hint {
+            color: #ffd700;
+            font-size: 0.9rem;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>Fullscreen Mode</h1>
+        <p>Special character test: Ä Ö Ü ß @ € µ</p>
+        <p class="hint">Double-click the background to switch into fullscreen mode.</p>
+    </div>
+</body>
+</html>`
+    };
+
+    // ==========================================
+    // 3. MODUL-REFERENZEN
+    // ==========================================
+    const editor = root.getElementById('web-editor');
+    const preview = root.getElementById('live-preview');
+    const previewPane = root.getElementById('preview-pane');
+    const btnCloseFs = root.getElementById('btn-close-fs');
+    const previewHeader = root.getElementById('preview-header');
+
+    const btnRun = root.getElementById('btn-run');
+    const toggleLive = root.getElementById('toggle-live');
+    const charCount = root.getElementById('char-count');
+    const renderStatus = root.getElementById('render-status');
+
+    const btnImport = root.getElementById('btn-import');
+    const fileImport = root.getElementById('file-import');
+    const btnExport = root.getElementById('btn-export');
+    const filenameInput = root.getElementById('doc-filename');
+
+    let renderStatusKey = 's_online';
+    let renderStatusResetTimer = null;
+
+    /*
+        Wichtig:
+        - true  = Editor enthält noch die eingebaute Vorgabe.
+        - false = User hat getippt, Datei geladen oder per Drag & Drop eingefügt.
+        Nur bei true darf die Vorlage beim Sprachwechsel ersetzt werden.
+    */
+    let editorContainsDefaultTemplate = true;
+
+    // ==========================================
+    // 4. i18n STATUS-HILFSFUNKTIONEN
+    // ==========================================
+    function setRenderStatusByKey(key, color) {
+        renderStatusKey = key;
+        renderStatus.textContent = mod_i18n.t(key);
+
+        if (color) {
+            renderStatus.style.color = color;
+        }
+    }
+
+    function refreshRenderStatusLanguage() {
+        if (!renderStatus) return;
+        renderStatus.textContent = mod_i18n.t(renderStatusKey || 's_online');
+    }
+
+    function isCurrentEditorDefaultTemplate() {
+        const value = editor.value.trim();
+
+        return (
+            value === defaultTemplates.de.trim() ||
+            value === defaultTemplates.en.trim()
+        );
+    }
+
+    function syncDefaultTemplateToLanguage() {
+        /*
+            Nur die eingebaute Vorgabe darf automatisch wechseln.
+            Eingefügter, getippter, hochgeladener oder per Drop geladener Code bleibt unverändert.
+        */
+        if (editorContainsDefaultTemplate || isCurrentEditorDefaultTemplate()) {
+            editor.value = defaultTemplates[mod_i18n.lang] || defaultTemplates.de;
+            editorContainsDefaultTemplate = true;
+            renderPreview();
+        }
+    }
+
+    if (window.osBus) {
+        window.osBus.on('lang-changed', (newLang) => {
+            mod_i18n.lang = newLang;
+            localStorage.setItem('arte_lang_pref', newLang);
+
+            mod_i18n.updateUI();
+            syncDefaultTemplateToLanguage();
+        });
+    }
+
+    // ==========================================
+    // 5. CORE ENGINE: RENDER & INJECTION LOGIC
+    // ==========================================
+    function renderPreview() {
+        let rawCode = editor.value;
+
+        // UTF-8 Schutzmechanismus
+        if (!rawCode.toLowerCase().includes('charset=')) {
+            if (rawCode.toLowerCase().includes('<head>')) {
+                rawCode = rawCode.replace(/<head>/i, '<head>\n    <meta charset="UTF-8">');
+            } else {
+                rawCode = `<head><meta charset="UTF-8"></head>\n` + rawCode;
+            }
+        }
+
+        // Fullscreen-Trigger Injektion:
+        // Dieser Code wird unsichtbar in die Sandbox geschleust, um den Doppel-Klick zu registrieren.
+        const fsInjection = "\n<scr" + "ipt>document.addEventListener('dblclick', function() { window.parent.postMessage('arte_fullscreen_trigger', '*'); });</scr" + "ipt>";
+
+        preview.srcdoc = rawCode + fsInjection;
+
+        charCount.textContent = `${new Blob([rawCode]).size} Bytes`;
+
+        setRenderStatusByKey('s_updated', '#28a745');
+
+        if (renderStatusResetTimer) {
+            clearTimeout(renderStatusResetTimer);
+        }
+
+        renderStatusResetTimer = setTimeout(() => {
+            setRenderStatusByKey('s_online', '#28a745');
+        }, 1000);
+    }
+
+    // ==========================================
+    // 6. FULLSCREEN LISTENER
+    // ==========================================
+    window.addEventListener('message', (e) => {
+        if (e.data === 'arte_fullscreen_trigger') {
+            previewPane.classList.add('fs-active');
+            previewHeader.style.display = 'none'; // Blendet den schmalen Header im Vollbild aus
+        }
+    });
+
+    btnCloseFs.addEventListener('click', () => {
+        previewPane.classList.remove('fs-active');
+        previewHeader.style.display = 'flex'; // Header wieder einblenden
+    });
+
+    // ==========================================
+    // 7. EDITOR LOGIC
+    // ==========================================
+    editor.addEventListener('input', () => {
+        /*
+            Sobald der User selbst etwas ändert, gilt der Inhalt nicht mehr als übersetzbare Vorgabe.
+        */
+        if (!isCurrentEditorDefaultTemplate()) {
+            editorContainsDefaultTemplate = false;
+        }
+
+        if (toggleLive.checked) {
+            renderPreview();
+        }
+    });
+
+    editor.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+
+            editorContainsDefaultTemplate = false;
+
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+
+            this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 4;
+
+            if (toggleLive.checked) {
+                renderPreview();
+            }
+        }
+    });
+
+    btnRun.addEventListener('click', renderPreview);
+
+    // ==========================================
+    // 8. I/O FILE SYSTEM
+    // ==========================================
+    function loadExternalCodeIntoEditor(code, filename) {
+        /*
+            Extern geladener Code wird NICHT automatisch übersetzt.
+            Das gilt für:
+            - Upload
+            - Drag & Drop
+            - später auch andere Import-Wege
+        */
+        editorContainsDefaultTemplate = false;
+        editor.value = code;
+
+        if (filename) {
+            const nameWithoutExt = filename.substring(0, filename.lastIndexOf('.')) || filename;
+            filenameInput.value = nameWithoutExt;
+        }
+
+        renderPreview();
+
+        if (window.osBus && filename) {
+            window.osBus.emit('log', {
+                msg: mod_i18n.t('log_loaded_1') + filename + mod_i18n.t('log_loaded_2')
+            });
+        }
+
+        setRenderStatusByKey('s_loaded', '#00ffcc');
+    }
+
+    function isAllowedCodeFile(file) {
+        if (!file) return false;
+
+        const name = file.name.toLowerCase();
+
+        return (
+            name.endsWith('.html') ||
+            name.endsWith('.htm') ||
+            name.endsWith('.css') ||
+            name.endsWith('.js') ||
+            name.endsWith('.txt')
+        );
+    }
+
+    function readCodeFile(file) {
+        if (!isAllowedCodeFile(file)) {
+            setRenderStatusByKey('s_drop_error', '#ff7b72');
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = (event) => {
+            loadExternalCodeIntoEditor(event.target.result, file.name);
+        };
+
+        reader.readAsText(file, "UTF-8");
+    }
+
+    btnImport.addEventListener('click', () => fileImport.click());
+
+    fileImport.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+
+        if (!file) return;
+
+        readCodeFile(file);
+        e.target.value = '';
+    });
+
+    // Drag & Drop direkt auf den Editor
+    editor.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        editor.classList.add('drag-active');
+        setRenderStatusByKey('s_drop_ready', '#ffd700');
+    });
+
+    editor.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        editor.classList.add('drag-active');
+    });
+
+    editor.addEventListener('dragleave', () => {
+        editor.classList.remove('drag-active');
+        setRenderStatusByKey('s_online', '#28a745');
+    });
+
+    editor.addEventListener('drop', (e) => {
+        e.preventDefault();
+        editor.classList.remove('drag-active');
+
+        const file = e.dataTransfer.files[0];
+
+        if (file) {
+            readCodeFile(file);
+            return;
+        }
+
+        /*
+            Wenn Text-Code reingezogen wird statt einer Datei:
+            einfügen, aber NICHT übersetzen.
+        */
+        const draggedText = e.dataTransfer.getData('text/plain');
+
+        if (draggedText) {
+            editorContainsDefaultTemplate = false;
+
+            const start = editor.selectionStart || editor.value.length;
+            const end = editor.selectionEnd || editor.value.length;
+
+            editor.value =
+                editor.value.substring(0, start) +
+                draggedText +
+                editor.value.substring(end);
+
+            editor.selectionStart = editor.selectionEnd = start + draggedText.length;
+
+            if (toggleLive.checked) {
+                renderPreview();
+            }
+        }
+    });
+
+    btnExport.addEventListener('click', () => {
+        let code = editor.value;
+        let filename = filenameInput.value.trim() || 'arte_web_module';
+
+        if (!filename.toLowerCase().endsWith('.html')) {
+            filename += '.html';
+        }
+
+        const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        URL.revokeObjectURL(url);
+
+        setRenderStatusByKey('s_exported', '#00ffcc');
+
+        if (window.osBus) {
+            window.osBus.emit('log', {
+                msg: mod_i18n.t('log_exported_1') + filename + mod_i18n.t('log_exported_2')
+            });
+        }
+    });
+
+    // ==========================================
+    // 9. START
+    // ==========================================
+    setTimeout(() => {
+        mod_i18n.updateUI();
+
+        /*
+            Beim Start wird die Vorlage passend zur aktuell gespeicherten Sprache gesetzt.
+            Danach darf sie nur noch wechseln, solange sie nicht vom User ersetzt wurde.
+        */
+        editor.value = defaultTemplates[mod_i18n.lang] || defaultTemplates.de;
+        editorContainsDefaultTemplate = true;
+
+        renderPreview();
+    }, 50);
+</script>

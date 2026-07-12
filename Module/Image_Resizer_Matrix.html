@@ -1,0 +1,575 @@
+<!-- 
+Lead Architect: Emanuel Schaaf / Google AI
+Open Origin Architecture
+Project: A.R.T.E. Module - Image Resizer Matrix (High Fidelity Scaler)
+-->
+<style>
+    .module-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        height: 100%;
+        font-family: 'Courier New', Courier, monospace;
+        color: #c9d1d9;
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        padding: 15px;
+        box-sizing: border-box;
+    }
+
+    .module-header {
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .module-header h3 {
+        color: #00ffcc;
+        margin: 0;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .dashboard {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 20px;
+        flex: 1;
+        min-height: 400px;
+    }
+
+    @media (max-width: 900px) {
+        .dashboard { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .panel-title {
+        font-size: 0.85rem;
+        color: #ffd700;
+        text-transform: uppercase;
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 5px;
+    }
+
+    /* Input / Steuerung (Linke Seite) */
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    label { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; }
+
+    .dimension-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .dim-input {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    input[type="number"], input[type="text"], select {
+        width: 100%;
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        padding: 10px;
+        font-family: inherit;
+        font-size: 0.9rem;
+        outline: none;
+        box-sizing: border-box;
+    }
+
+    input:focus, select:focus { border-color: #00ffcc; }
+    input:disabled, select:disabled { color: #8b949e; cursor: not-allowed; border-color: #30363d; }
+
+    /* Der Lock-Button für Proportionen */
+    .btn-lock {
+        background: transparent;
+        border: 1px solid #30363d;
+        color: #00ffcc;
+        width: 38px;
+        height: 38px;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        transition: all 0.2s;
+        margin-top: 18px; /* Alignment with inputs */
+    }
+
+    .btn-lock:hover { border-color: #00ffcc; background-color: rgba(0, 255, 204, 0.1); }
+    .btn-lock.unlocked { color: #8b949e; border-color: #30363d; }
+
+    .btn-core {
+        width: 100%;
+        padding: 12px;
+        background-color: transparent;
+        border: 1px solid #ff00ff;
+        color: #ff00ff;
+        cursor: pointer;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-family: inherit;
+        transition: all 0.2s;
+        letter-spacing: 1px;
+        margin-top: auto;
+    }
+
+    .btn-core:hover:not(:disabled) { background-color: #ff00ff; color: #0d1117; }
+    .btn-core:disabled { border-color: #30363d; color: #30363d; cursor: not-allowed; }
+
+    /* Vorschau & Drop Zone (Rechte Seite) */
+    .preview-container {
+        flex: 1;
+        position: relative;
+        border: 2px dashed #30363d;
+        background-color: #05070a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .preview-container.dragover {
+        border-color: #00ffcc;
+        background-color: rgba(0, 255, 204, 0.05);
+    }
+
+    .drop-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        pointer-events: none;
+    }
+
+    .drop-content svg { stroke: #8b949e; width: 48px; height: 48px; transition: stroke 0.2s; }
+    .preview-container.dragover .drop-content svg { stroke: #00ffcc; }
+    
+    .drop-text { color: #8b949e; font-size: 0.9rem; margin: 0; pointer-events: none; }
+    .drop-highlight { color: #00ffcc; font-weight: bold; text-transform: uppercase; font-size: 0.8rem; pointer-events: none;}
+
+    #image-preview {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        display: none;
+        z-index: 1;
+    }
+
+    /* Auflösungs-Badge auf dem Bild */
+    .resolution-badge {
+        position: absolute;
+        bottom: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(13, 17, 23, 0.9);
+        border: 1px solid #00ffcc;
+        color: #00ffcc;
+        padding: 6px 15px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        border-radius: 20px;
+        z-index: 2;
+        display: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    .resolution-badge span { color: #8b949e; font-weight: normal; margin: 0 5px; }
+
+    .status-hud {
+        font-size: 0.8rem;
+        color: #ffd700;
+        text-align: center;
+        min-height: 16px;
+        padding-top: 5px;
+    }
+
+    input[type="file"] { display: none; }
+</style>
+
+<div class="module-wrapper">
+    <div class="module-header">
+        <div>
+            <h3 data-mi18n="m_title">Image Resizer Matrix</h3>
+            <span style="font-size: 0.75rem; color: #8b949e;" data-mi18n="m_desc">High Fidelity Pixel Scaler | Aspect Ratio Control | Omni-Format</span>
+        </div>
+    </div>
+
+    <input type="file" id="file-upload" accept="image/png, image/jpeg, image/webp, image/gif">
+
+    <div class="dashboard">
+        <!-- SEKTOR 1: STEUERUNG (Links) -->
+        <div class="panel">
+            <div class="panel-title" data-mi18n="p1_title">⚙️ Dimension & Export</div>
+            
+            <div class="dimension-row">
+                <div class="dim-input">
+                    <label data-mi18n="l_width">Breite (px)</label>
+                    <input type="number" id="inp-width" placeholder="0" disabled>
+                </div>
+                
+                <button class="btn-lock" id="btn-lock-ratio" title="Proportionen beibehalten" data-mi18n-title="t_lock">
+                    🔗
+                </button>
+
+                <div class="dim-input">
+                    <label data-mi18n="l_height">Höhe (px)</label>
+                    <input type="number" id="inp-height" placeholder="0" disabled>
+                </div>
+            </div>
+
+            <div class="control-group" style="margin-top: 10px;">
+                <label data-mi18n="l_format">Ziel-Format:</label>
+                <select id="sel-format" disabled>
+                    <option value="image/png" data-mi18n="f_png">PNG (Verlustfrei / Transparent)</option>
+                    <option value="image/jpeg" data-mi18n="f_jpg">JPG (Kompakt / Fotografie)</option>
+                    <option value="image/webp" data-mi18n="f_webp">WEBP (Modern / Web-optimiert)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label data-mi18n="l_filename">Ausgabe-Dateiname:</label>
+                <input type="text" id="inp-filename" placeholder="Warte auf Bild..." data-mi18n-placeholder="ph_wait" disabled>
+            </div>
+
+            <button class="btn-core" id="btn-download" disabled data-mi18n="btn_down">💾 Bild Skalieren & Speichern</button>
+            <div class="status-hud" id="hud-status" data-mi18n="h_init">System bereit. Bild einwerfen.</div>
+        </div>
+
+        <!-- SEKTOR 2: VORSCHAU (Rechts) -->
+        <div class="panel" style="padding: 0; border: none; background: transparent;">
+            <div class="preview-container" id="drop-zone">
+                <div class="drop-content" id="drop-content">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <p class="drop-text" data-mi18n="d_drag">Bild hier ablegen</p>
+                    <span class="drop-highlight" data-mi18n="d_click">Klicken zum Upload</span>
+                </div>
+                
+                <img id="image-preview" src="" alt="Preview">
+                
+                <div class="resolution-badge" id="res-badge">
+                    <span id="badge-w">0</span> x <span id="badge-h">0</span> px
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const root = typeof shadowRoot !== 'undefined' ? shadowRoot : document;
+
+    // ==========================================
+    // 1. STATISCHE & SICHERE i18n ÜBERSETZUNGS-ENGINE
+    // ==========================================
+    const mod_i18n = {
+        lang: localStorage.getItem('arte_lang_pref') || 'de',
+        dict: {
+            de: {
+                m_title: "Image Resizer Matrix",
+                m_desc: "High Fidelity Pixel Scaler | Aspect Ratio Control | Omni-Format",
+                p1_title: "⚙️ Dimension & Export",
+                l_width: "Breite (px)",
+                l_height: "Höhe (px)",
+                t_lock: "Proportionen beibehalten (Sperren/Entsperren)",
+                l_format: "Ziel-Format:",
+                f_png: "PNG (Verlustfrei / Transparent)",
+                f_jpg: "JPG (Kompakt / Fotografie)",
+                f_webp: "WEBP (Modern / Web-optimiert)",
+                l_filename: "Ausgabe-Dateiname:",
+                ph_wait: "Warte auf Bild...",
+                btn_down: "💾 Bild Skalieren & Speichern",
+                d_drag: "Bild hier ablegen",
+                d_click: "Klicken zum Upload",
+                h_init: "System bereit. Bild einwerfen.",
+                
+                err_fmt: "Fehler: Nur Bilder werden unterstützt.",
+                h_load: "Bild geladen. Parameter anpassen.",
+                h_done: "Bild erfolgreich verarbeitet und exportiert."
+            },
+            en: {
+                m_title: "Image Resizer Matrix",
+                m_desc: "High Fidelity Pixel Scaler | Aspect Ratio Control | Omni-Format",
+                p1_title: "⚙️ Dimensions & Export",
+                l_width: "Width (px)",
+                l_height: "Height (px)",
+                t_lock: "Keep Proportions (Lock/Unlock)",
+                l_format: "Target Format:",
+                f_png: "PNG (Lossless / Transparent)",
+                f_jpg: "JPG (Compact / Photography)",
+                f_webp: "WEBP (Modern / Web-optimized)",
+                l_filename: "Output Filename:",
+                ph_wait: "Waiting for image...",
+                btn_down: "💾 Scale & Save Image",
+                d_drag: "Drop image here",
+                d_click: "Click to upload",
+                h_init: "System ready. Drop an image.",
+                
+                err_fmt: "Error: Only images are supported.",
+                h_load: "Image loaded. Adjust parameters.",
+                h_done: "Image successfully processed and exported."
+            }
+        },
+
+        t: function(key) { return this.dict[this.lang][key] || key; },
+
+        updateUI: function() {
+            root.querySelectorAll('[data-mi18n]').forEach(el => {
+                el.innerHTML = this.t(el.getAttribute('data-mi18n'));
+            });
+            root.querySelectorAll('[data-mi18n-placeholder]').forEach(el => {
+                el.placeholder = this.t(el.getAttribute('data-mi18n-placeholder'));
+            });
+            root.querySelectorAll('[data-mi18n-title]').forEach(el => {
+                el.title = this.t(el.getAttribute('data-mi18n-title'));
+            });
+            
+            const hudNode = root.getElementById('hud-status');
+            if (hudNode && window.currentResizerHud) {
+                hudNode.textContent = this.t(window.currentResizerHud);
+            }
+        }
+    };
+
+    window.currentResizerHud = 'h_init';
+    function setHudState(stateKey, color) {
+        window.currentResizerHud = stateKey;
+        const hudNode = root.getElementById('hud-status');
+        hudNode.textContent = mod_i18n.t(stateKey);
+        if (color) hudNode.style.color = color;
+    }
+
+    if (window.osBus) {
+        window.osBus.on('lang-changed', (newLang) => {
+            mod_i18n.lang = newLang;
+            mod_i18n.updateUI();
+        });
+    }
+    setTimeout(() => { mod_i18n.updateUI(); }, 50);
+
+    // ==========================================
+    // 2. MODUL LOGIK (High Fidelity Resizer)
+    // ==========================================
+    const dropZone = root.getElementById('drop-zone');
+    const dropContent = root.getElementById('drop-content');
+    const fileInput = root.getElementById('file-upload');
+    const imgPreview = root.getElementById('image-preview');
+    const resBadge = root.getElementById('res-badge');
+    const badgeW = root.getElementById('badge-w');
+    const badgeH = root.getElementById('badge-h');
+
+    const inpWidth = root.getElementById('inp-width');
+    const inpHeight = root.getElementById('inp-height');
+    const btnLockRatio = root.getElementById('btn-lock-ratio');
+    const selFormat = root.getElementById('sel-format');
+    const inpFilename = root.getElementById('inp-filename');
+    const btnDownload = root.getElementById('btn-download');
+
+    let originalImage = new Image();
+    let originalRatio = 1;
+    let keepRatio = true;
+    let currentExt = 'png';
+
+    // --- Drag & Drop Mechanik ---
+    dropZone.addEventListener('click', () => {
+        // Klick auf die Preview-Zone öffnet den Dialog, aber nicht, wenn man das Badge klickt
+        fileInput.click();
+    });
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        dropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(evt => {
+        dropZone.addEventListener(evt, () => dropZone.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(evt => {
+        dropZone.addEventListener(evt, () => dropZone.classList.remove('dragover'), false);
+    });
+
+    dropZone.addEventListener('drop', e => {
+        if (e.dataTransfer.files.length) handleImageFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', e => {
+        if (e.target.files.length) handleImageFile(e.target.files[0]);
+    });
+
+    // --- Datei Verarbeitung ---
+    function handleImageFile(file) {
+        if (!file.type.startsWith('image/')) {
+            setHudState('err_fmt', '#ff7b72');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            originalImage.onload = () => {
+                // UI aktivieren
+                dropContent.style.display = 'none';
+                imgPreview.style.display = 'block';
+                imgPreview.src = originalImage.src;
+                resBadge.style.display = 'block';
+                
+                // Originalwerte setzen
+                const w = originalImage.width;
+                const h = originalImage.height;
+                originalRatio = w / h;
+
+                inpWidth.disabled = false;
+                inpHeight.disabled = false;
+                selFormat.disabled = false;
+                inpFilename.disabled = false;
+                btnDownload.disabled = false;
+
+                inpWidth.value = w;
+                inpHeight.value = h;
+                
+                updateBadge(w, h);
+
+                // Dateiname & Endung
+                const nameParts = file.name.split('.');
+                currentExt = nameParts.pop().toLowerCase();
+                const baseName = nameParts.join('.');
+                inpFilename.value = baseName + "_ARTE";
+
+                // Format Dropdown vorauswählen anhand des Originals (wenn möglich)
+                if (currentExt === 'jpg' || currentExt === 'jpeg') selFormat.value = 'image/jpeg';
+                else if (currentExt === 'webp') selFormat.value = 'image/webp';
+                else selFormat.value = 'image/png';
+
+                setHudState('h_load', '#00ffcc');
+            };
+            originalImage.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function updateBadge(w, h) {
+        badgeW.textContent = w;
+        badgeH.textContent = h;
+    }
+
+    // --- Mathematik: Aspect Ratio ---
+    btnLockRatio.addEventListener('click', () => {
+        keepRatio = !keepRatio;
+        if (keepRatio) {
+            btnLockRatio.textContent = '🔗';
+            btnLockRatio.classList.remove('unlocked');
+            // Re-sync bei Lock: Wir nehmen Breite als Master
+            if(inpWidth.value) {
+                inpHeight.value = Math.round(inpWidth.value / originalRatio);
+                updateBadge(inpWidth.value, inpHeight.value);
+            }
+        } else {
+            btnLockRatio.textContent = '🔓';
+            btnLockRatio.classList.add('unlocked');
+        }
+    });
+
+    inpWidth.addEventListener('input', () => {
+        let w = parseInt(inpWidth.value);
+        if (isNaN(w) || w <= 0) return;
+        
+        if (keepRatio) {
+            let h = Math.round(w / originalRatio);
+            inpHeight.value = h;
+            updateBadge(w, h);
+        } else {
+            updateBadge(w, inpHeight.value || 0);
+        }
+    });
+
+    inpHeight.addEventListener('input', () => {
+        let h = parseInt(inpHeight.value);
+        if (isNaN(h) || h <= 0) return;
+        
+        if (keepRatio) {
+            let w = Math.round(h * originalRatio);
+            inpWidth.value = w;
+            updateBadge(w, h);
+        } else {
+            updateBadge(inpWidth.value || 0, h);
+        }
+    });
+
+    // --- High Fidelity Export Engine ---
+    btnDownload.addEventListener('click', () => {
+        const targetW = parseInt(inpWidth.value);
+        const targetH = parseInt(inpHeight.value);
+
+        if (!targetW || !targetH || targetW <= 0 || targetH <= 0) return;
+
+        // Offscreen Canvas für das Rendern erstellen
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = targetW;
+        offCanvas.height = targetH;
+        const offCtx = offCanvas.getContext('2d');
+
+        // Qualitäts-Flag für scharfe Wasserzeichen/Pixel
+        offCtx.imageSmoothingEnabled = true;
+        offCtx.imageSmoothingQuality = 'high';
+
+        // Hintergrund bei JPG Export auf Weiß setzen (sonst werden transparente PNG-Pixel schwarz)
+        const mimeType = selFormat.value;
+        if (mimeType === 'image/jpeg') {
+            offCtx.fillStyle = '#ffffff';
+            offCtx.fillRect(0, 0, targetW, targetH);
+        }
+
+        // Bild zeichnen
+        offCtx.drawImage(originalImage, 0, 0, targetW, targetH);
+
+        // Dateiendung bestimmen
+        let ext = 'png';
+        if (mimeType === 'image/jpeg') ext = 'jpg';
+        if (mimeType === 'image/webp') ext = 'webp';
+
+        // Dateiname auslesen
+        let fname = inpFilename.value.trim() || `ARTE_Resized_${new Date().getTime()}`;
+
+        // Exportieren
+        const dataUrl = offCanvas.toDataURL(mimeType, 1.0); // 1.0 = Max Quality für JPG/WEBP
+        
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `${fname}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        setHudState('h_done', '#ff00ff');
+        
+        if (window.osBus) {
+            window.osBus.emit('log', { msg: `Image Resizer: ${fname}.${ext} (${targetW}x${targetH}px) exportiert.` });
+        }
+    });
+
+</script>

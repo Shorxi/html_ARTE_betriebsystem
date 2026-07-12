@@ -1,0 +1,635 @@
+<style>
+    .module-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        height: 100%;
+        font-family: 'Courier New', Courier, monospace;
+        color: #c9d1d9;
+    }
+
+    .module-header {
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 8px;
+    }
+
+    .module-header h3 {
+        color: #00ffcc;
+        margin: 0 0 5px 0;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+    }
+
+    .input-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    input[type="text"],
+    input[type="file"],
+    select {
+        flex: 1;
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        padding: 8px;
+        font-family: inherit;
+    }
+
+    input[type="text"]:focus,
+    select:focus {
+        outline: none;
+        border-color: #00ffcc;
+    }
+
+    .btn {
+        padding: 8px 15px;
+        background-color: transparent;
+        border: 1px solid #00ffcc;
+        color: #00ffcc;
+        cursor: pointer;
+        font-weight: bold;
+        text-transform: uppercase;
+        transition: all 0.2s;
+    }
+
+    .btn:hover {
+        background-color: #00ffcc;
+        color: #0d1117;
+    }
+
+    .btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+    .btn-export {
+        border-color: #ff00ff;
+        color: #ff00ff;
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .btn-export:hover {
+        background-color: #ff00ff;
+        color: #0d1117;
+    }
+
+    .video-container {
+        width: 100%;
+        background-color: #000;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    video {
+        width: 100%;
+        max-height: 300px;
+        display: block;
+    }
+
+    .timeline-controls {
+        background-color: #161b22;
+        padding: 15px;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+    }
+
+    .slider-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .slider-label {
+        width: 70px;
+        font-size: 0.85rem;
+        color: #ffd700;
+    }
+
+    input[type="range"] {
+        flex: 1;
+        accent-color: #00ffcc;
+    }
+
+    .time-display {
+        width: 80px;
+        text-align: right;
+        font-size: 0.85rem;
+    }
+
+    .format-selection {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .format-selection label {
+        font-size: 0.85rem;
+        color: #8b949e;
+        white-space: nowrap;
+    }
+
+    .status-msg {
+        font-size: 0.85rem;
+        color: #ffd700;
+        text-align: center;
+        min-height: 15px;
+    }
+
+    .progress-bar-container {
+        height: 4px;
+        background: #30363d;
+        width: 100%;
+        display: none;
+        margin-top: 10px;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: #ff00ff;
+        width: 0%;
+        transition: width 0.1s linear;
+    }
+</style>
+
+<div class="module-wrapper">
+    <div class="module-header">
+        <h3 data-mi18n="m_title">Kinetic Video Engine</h3>
+        <span style="font-size: 0.75rem; color: #8b949e;" data-mi18n="m_desc">Real-Time Dubbing & Adaptive Codec Scanner</span>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="url-input" placeholder="Google Drive URL oder direkte Video-URL..." data-mi18n-placeholder="ph_url">
+        <button class="btn" id="btn-load-url" data-mi18n="btn_load">Laden</button>
+    </div>
+
+    <div class="input-group" style="margin-top: -5px;">
+        <input type="file" id="file-input" accept="video/*" title="Offline Video auswählen" data-mi18n-title="t_file">
+    </div>
+
+    <div class="video-container">
+        <video id="video-player" controls crossorigin="anonymous"></video>
+    </div>
+
+    <div class="timeline-controls">
+        <div class="slider-container">
+            <span class="slider-label" data-mi18n="lbl_start">START IN</span>
+            <input type="range" id="slider-start" min="0" max="100" value="0" step="0.1">
+            <span class="time-display" id="time-start">0.0s</span>
+        </div>
+
+        <div class="slider-container">
+            <span class="slider-label" data-mi18n="lbl_end">CUT OUT</span>
+            <input type="range" id="slider-end" min="0" max="100" value="100" step="0.1">
+            <span class="time-display" id="time-end">0.0s</span>
+        </div>
+    </div>
+
+    <div class="format-selection">
+        <label for="format-select" data-mi18n="lbl_format">Export-Format:</label>
+        <select id="format-select"></select>
+    </div>
+
+    <button class="btn btn-export" id="btn-export" data-mi18n="btn_export">Prozessieren & Speichern</button>
+
+    <div class="progress-bar-container" id="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <div class="status-msg" id="status-display" data-mi18n="s_init">System initialisiert. Scanne Codecs...</div>
+</div>
+
+<script>
+    const root = typeof shadowRoot !== 'undefined' ? shadowRoot : document;
+
+    // ==========================================
+    // 1. STATISCHE & SICHERE i18n ÜBERSETZUNGS-ENGINE
+    // ==========================================
+    const mod_i18n = {
+        lang: localStorage.getItem('arte_lang_pref') || 'de',
+        dict: {
+            de: {
+                m_title: "Kinetic Video Engine",
+                m_desc: "Real-Time Dubbing & Adaptive Codec Scanner",
+
+                ph_url: "Google Drive URL oder direkte Video-URL...",
+                btn_load: "Laden",
+                t_file: "Offline Video auswählen",
+
+                lbl_start: "START IN",
+                lbl_end: "CUT OUT",
+                lbl_format: "Export-Format:",
+
+                btn_export: "Prozessieren & Speichern",
+
+                s_init: "System initialisiert. Scanne Codecs...",
+                s_codec_found_1: " native Codecs gefunden. System bereit.",
+                s_codec_warn: "Warnung: Kein nativer Encoder im Browser gefunden.",
+                s_drive: "Google Drive ID erkannt. Generiere direkten Stream...",
+                s_load_stream: "Lade Video-Stream...",
+                s_local_file: "Lokale Datei geladen: ",
+                s_sync: "Stream synchronisiert. Bereit für Schnitt.",
+                s_invalid_cut: "Fehler: Ungültiger Schnittbereich.",
+                s_recording_1: "Aufzeichnung in ",
+                s_recording_2: " gestartet...",
+                s_export_ok_1: "Export erfolgreich (",
+                s_export_ok_2: ").",
+                s_error_recording: "Fehler bei der Aufzeichnung (CORS oder Codec-Limitierung).",
+
+                log_video_cut_1: "Video Cut in ",
+                log_video_cut_2: " generiert.",
+
+                codec_mp4_hq: "MP4 (H.264 High HQ)",
+                codec_mp4_std: "MP4 (Standard)",
+                codec_webm_vp9: "WebM (VP9 + Opus HQ)",
+                codec_webm_vp8: "WebM (VP8 Standard)",
+                codec_webm_base: "WebM (Basis Fallback)"
+            },
+            en: {
+                m_title: "Kinetic Video Engine",
+                m_desc: "Real-Time Dubbing & Adaptive Codec Scanner",
+
+                ph_url: "Google Drive URL or direct video URL...",
+                btn_load: "Load",
+                t_file: "Select offline video",
+
+                lbl_start: "START IN",
+                lbl_end: "CUT OUT",
+                lbl_format: "Export format:",
+
+                btn_export: "Process & Save",
+
+                s_init: "System initialized. Scanning codecs...",
+                s_codec_found_1: " native codecs found. System ready.",
+                s_codec_warn: "Warning: No native encoder found in this browser.",
+                s_drive: "Google Drive ID detected. Generating direct stream...",
+                s_load_stream: "Loading video stream...",
+                s_local_file: "Local file loaded: ",
+                s_sync: "Stream synchronized. Ready for cutting.",
+                s_invalid_cut: "Error: Invalid cut range.",
+                s_recording_1: "Recording in ",
+                s_recording_2: " started...",
+                s_export_ok_1: "Export successful (",
+                s_export_ok_2: ").",
+                s_error_recording: "Recording error (CORS or codec limitation).",
+
+                log_video_cut_1: "Video cut generated in ",
+                log_video_cut_2: ".",
+
+                codec_mp4_hq: "MP4 (H.264 High HQ)",
+                codec_mp4_std: "MP4 (Standard)",
+                codec_webm_vp9: "WebM (VP9 + Opus HQ)",
+                codec_webm_vp8: "WebM (VP8 Standard)",
+                codec_webm_base: "WebM (Base Fallback)"
+            }
+        },
+
+        t: function(key) {
+            return this.dict[this.lang][key] || key;
+        },
+
+        updateUI: function() {
+            root.querySelectorAll('[data-mi18n]').forEach(el => {
+                el.innerHTML = this.t(el.getAttribute('data-mi18n'));
+            });
+
+            root.querySelectorAll('[data-mi18n-title]').forEach(el => {
+                el.title = this.t(el.getAttribute('data-mi18n-title'));
+            });
+
+            root.querySelectorAll('[data-mi18n-placeholder]').forEach(el => {
+                el.placeholder = this.t(el.getAttribute('data-mi18n-placeholder'));
+            });
+
+            updateCodecLabels();
+        }
+    };
+
+    if (window.osBus) {
+        window.osBus.on('lang-changed', (newLang) => {
+            mod_i18n.lang = newLang;
+            localStorage.setItem('arte_lang_pref', newLang);
+            mod_i18n.updateUI();
+            refreshIdleStatusAfterLanguageChange();
+        });
+    }
+
+    // ==========================================
+    // 2. MODUL-REFERENZEN
+    // ==========================================
+    const video = root.getElementById('video-player');
+    const urlInput = root.getElementById('url-input');
+    const fileInput = root.getElementById('file-input');
+    const btnLoadUrl = root.getElementById('btn-load-url');
+    const btnExport = root.getElementById('btn-export');
+
+    const sliderStart = root.getElementById('slider-start');
+    const sliderEnd = root.getElementById('slider-end');
+    const timeStart = root.getElementById('time-start');
+    const timeEnd = root.getElementById('time-end');
+
+    const formatSelect = root.getElementById('format-select');
+    const statusDisplay = root.getElementById('status-display');
+    const progressContainer = root.getElementById('progress-container');
+    const progressBar = root.getElementById('progress-bar');
+
+    let videoDuration = 0;
+    let isRecording = false;
+    let codecFoundCount = 0;
+    let lastStableStatusKey = 's_init';
+
+    // ==========================================
+    // 3. i18n-HILFSFUNKTIONEN
+    // ==========================================
+    function setStatusByKey(key, color) {
+        lastStableStatusKey = key;
+        statusDisplay.textContent = mod_i18n.t(key);
+
+        if (color) {
+            statusDisplay.style.color = color;
+        }
+    }
+
+    function setStatusText(text, color) {
+        statusDisplay.textContent = text;
+
+        if (color) {
+            statusDisplay.style.color = color;
+        }
+    }
+
+    function refreshIdleStatusAfterLanguageChange() {
+        if (isRecording) return;
+
+        if (video.src && videoDuration > 0) {
+            setStatusByKey('s_sync', '#00ffcc');
+        } else if (codecFoundCount > 0) {
+            setStatusText(codecFoundCount + mod_i18n.t('s_codec_found_1'), '#ffd700');
+        } else {
+            setStatusByKey(lastStableStatusKey || 's_init', statusDisplay.style.color || '#ffd700');
+        }
+    }
+
+    function updateCodecLabels() {
+        Array.from(formatSelect.options).forEach(option => {
+            const key = option.getAttribute('data-codec-label');
+
+            if (key) {
+                option.textContent = mod_i18n.t(key);
+            }
+        });
+    }
+
+    // ==========================================
+    // 4. SYSTEM-SCAN: ADAPTIVE CODEC ERKENNUNG
+    // ==========================================
+    function scanSupportedCodecs() {
+        formatSelect.innerHTML = '';
+
+        // Liste potenzieller Formate von bester Kompatibilität zu Fallbacks
+        const candidates = [
+            {
+                mime: 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"',
+                labelKey: 'codec_mp4_hq'
+            },
+            {
+                mime: 'video/mp4',
+                labelKey: 'codec_mp4_std'
+            },
+            {
+                mime: 'video/webm; codecs="vp9, opus"',
+                labelKey: 'codec_webm_vp9'
+            },
+            {
+                mime: 'video/webm; codecs="vp8, vorbis"',
+                labelKey: 'codec_webm_vp8'
+            },
+            {
+                mime: 'video/webm',
+                labelKey: 'codec_webm_base'
+            }
+        ];
+
+        let found = 0;
+
+        candidates.forEach(candidate => {
+            if (MediaRecorder.isTypeSupported(candidate.mime)) {
+                const opt = document.createElement('option');
+                opt.value = candidate.mime;
+                opt.textContent = mod_i18n.t(candidate.labelKey);
+                opt.setAttribute('data-codec-label', candidate.labelKey);
+                formatSelect.appendChild(opt);
+                found++;
+            }
+        });
+
+        codecFoundCount = found;
+
+        if (found > 0) {
+            setStatusText(found + mod_i18n.t('s_codec_found_1'), '#ffd700');
+            lastStableStatusKey = 'codecs_ready';
+        } else {
+            setStatusByKey('s_codec_warn', '#ff7b72');
+            btnExport.disabled = true;
+        }
+    }
+
+    // ==========================================
+    // 5. FORMATIERUNG DER ZEIT
+    // ==========================================
+    function formatTime(seconds) {
+        return parseFloat(seconds).toFixed(1) + 's';
+    }
+
+    // ==========================================
+    // 6. GOOGLE DRIVE URL PARSER
+    // ==========================================
+    function parseDriveURL(url) {
+        const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+
+        if (match && match[1]) {
+            setStatusByKey('s_drive', '#ffd700');
+            return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+        }
+
+        return url;
+    }
+
+    // ==========================================
+    // 7. LADE-LOGIK
+    // ==========================================
+    function loadVideoSource(src) {
+        video.src = src;
+        video.load();
+        setStatusByKey('s_load_stream', '#ffd700');
+    }
+
+    btnLoadUrl.addEventListener('click', () => {
+        const rawUrl = urlInput.value.trim();
+
+        if (rawUrl) {
+            loadVideoSource(parseDriveURL(rawUrl));
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+
+        if (file) {
+            const fileUrl = URL.createObjectURL(file);
+
+            loadVideoSource(fileUrl);
+            setStatusText(mod_i18n.t('s_local_file') + file.name, '#ffd700');
+            urlInput.value = '';
+        }
+    });
+
+    // ==========================================
+    // 8. VIDEO METADATEN & SLIDER LOGIK
+    // ==========================================
+    video.addEventListener('loadedmetadata', () => {
+        videoDuration = video.duration;
+
+        sliderStart.max = videoDuration;
+        sliderEnd.max = videoDuration;
+        sliderEnd.value = videoDuration;
+
+        timeStart.textContent = formatTime(0);
+        timeEnd.textContent = formatTime(videoDuration);
+
+        setStatusByKey('s_sync', '#00ffcc');
+    });
+
+    sliderStart.addEventListener('input', () => {
+        if (parseFloat(sliderStart.value) >= parseFloat(sliderEnd.value)) {
+            sliderStart.value = sliderEnd.value - 0.1;
+        }
+
+        timeStart.textContent = formatTime(sliderStart.value);
+        video.currentTime = sliderStart.value;
+    });
+
+    sliderEnd.addEventListener('input', () => {
+        if (parseFloat(sliderEnd.value) <= parseFloat(sliderStart.value)) {
+            sliderEnd.value = parseFloat(sliderStart.value) + 0.1;
+        }
+
+        timeEnd.textContent = formatTime(sliderEnd.value);
+        video.currentTime = sliderEnd.value;
+    });
+
+    // ==========================================
+    // 9. NATIVE KOPIERWERK-ENGINE / EXPORT
+    // ==========================================
+    btnExport.addEventListener('click', async () => {
+        if (!video.src || isRecording) return;
+
+        const startTime = parseFloat(sliderStart.value);
+        const endTime = parseFloat(sliderEnd.value);
+        const cutDuration = endTime - startTime;
+
+        const selectedMimeType = formatSelect.value;
+        const fileExtension = selectedMimeType.includes('mp4') ? 'mp4' : 'webm';
+
+        if (cutDuration <= 0) {
+            setStatusByKey('s_invalid_cut', '#ff7b72');
+            return;
+        }
+
+        try {
+            isRecording = true;
+            btnExport.disabled = true;
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+
+            setStatusText(
+                mod_i18n.t('s_recording_1') + fileExtension.toUpperCase() + mod_i18n.t('s_recording_2'),
+                '#ff00ff'
+            );
+
+            const stream = video.captureStream();
+            const mediaRecorder = new MediaRecorder(stream, { mimeType: selectedMimeType });
+            const recordedChunks = [];
+
+            mediaRecorder.ondataavailable = e => {
+                if (e.data.size > 0) recordedChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: selectedMimeType });
+                const downloadUrl = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `ARTE_Cut_${new Date().getTime()}.${fileExtension}`;
+
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                URL.revokeObjectURL(downloadUrl);
+
+                isRecording = false;
+                btnExport.disabled = false;
+                progressContainer.style.display = 'none';
+
+                setStatusText(
+                    mod_i18n.t('s_export_ok_1') + fileExtension.toUpperCase() + mod_i18n.t('s_export_ok_2'),
+                    '#00ffcc'
+                );
+
+                video.pause();
+
+                if (window.osBus) {
+                    window.osBus.emit('log', {
+                        msg: mod_i18n.t('log_video_cut_1') + fileExtension + mod_i18n.t('log_video_cut_2')
+                    });
+                }
+            };
+
+            video.currentTime = startTime;
+            await video.play();
+
+            mediaRecorder.start();
+
+            const updateProcess = () => {
+                if (!isRecording) return;
+
+                const currentRunTime = video.currentTime - startTime;
+                const progress = (currentRunTime / cutDuration) * 100;
+
+                progressBar.style.width = `${Math.min(progress, 100)}%`;
+
+                if (video.currentTime >= endTime) {
+                    mediaRecorder.stop();
+                    video.pause();
+                } else {
+                    requestAnimationFrame(updateProcess);
+                }
+            };
+
+            requestAnimationFrame(updateProcess);
+        } catch (error) {
+            console.error('[Video Engine Error]', error);
+
+            setStatusByKey('s_error_recording', '#ff7b72');
+
+            isRecording = false;
+            btnExport.disabled = false;
+            progressContainer.style.display = 'none';
+        }
+    });
+
+    // ==========================================
+    // 10. START
+    // ==========================================
+    setTimeout(() => {
+        mod_i18n.updateUI();
+        scanSupportedCodecs();
+    }, 50);
+</script>

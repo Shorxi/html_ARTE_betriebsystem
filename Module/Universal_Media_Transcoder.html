@@ -1,0 +1,669 @@
+<!-- 
+Lead Architect: Emanuel Schaaf / Google AI
+Open Origin Architecture
+Project: A.R.T.E. Module - Universal Media Converter (Offline HQ MP3 Transcoder)
+-->
+<style>
+    .module-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        height: 100%;
+        font-family: 'Courier New', Courier, monospace;
+        color: #c9d1d9;
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        padding: 15px;
+        box-sizing: border-box;
+    }
+
+    .module-header {
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .module-header h3 {
+        color: #00ffcc;
+        margin: 0;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .dashboard {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        flex: 1;
+    }
+
+    @media (max-width: 900px) {
+        .dashboard { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .panel-title {
+        font-size: 0.85rem;
+        color: #ffd700;
+        text-transform: uppercase;
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 5px;
+    }
+
+    .drop-zone {
+        border: 2px dashed #30363d;
+        border-radius: 4px;
+        padding: 40px 20px;
+        text-align: center;
+        background-color: #05070a;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        flex: 1;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+        border-color: #00ffcc;
+        background-color: rgba(0, 255, 204, 0.05);
+    }
+
+    .drop-zone svg { stroke: #8b949e; width: 40px; height: 40px; transition: stroke 0.2s; }
+    .drop-zone:hover svg, .drop-zone.dragover svg { stroke: #00ffcc; }
+
+    .drop-text { color: #8b949e; font-size: 0.85rem; margin: 0; }
+    .drop-highlight { color: #00ffcc; font-weight: bold; text-transform: uppercase; font-size: 0.75rem; }
+
+    .info-box {
+        background-color: #05070a;
+        border: 1px solid #30363d;
+        padding: 10px;
+        font-size: 0.8rem;
+        color: #c9d1d9;
+        display: none; 
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        border-bottom: 1px dashed #30363d;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-val { color: #00ffcc; font-weight: bold; }
+
+    label { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; }
+
+    select, .text-input {
+        width: 100%;
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        padding: 10px;
+        font-family: inherit;
+        font-size: 0.85rem;
+        outline: none;
+        box-sizing: border-box;
+    }
+
+    select:focus, .text-input:focus { border-color: #ff00ff; }
+    
+    .text-input:disabled { color: #8b949e; cursor: not-allowed; }
+
+    .btn-core {
+        width: 100%;
+        padding: 12px;
+        background-color: transparent;
+        border: 1px solid #ff00ff;
+        color: #ff00ff;
+        cursor: pointer;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-family: inherit;
+        transition: all 0.2s;
+        letter-spacing: 1px;
+    }
+
+    .btn-core:hover:not(:disabled) {
+        background-color: #ff00ff;
+        color: #0d1117;
+    }
+
+    .btn-core:disabled {
+        border-color: #30363d;
+        color: #30363d;
+        cursor: not-allowed;
+    }
+
+    .btn-download {
+        border-color: #00ffcc;
+        color: #00ffcc;
+        display: none;
+    }
+    .btn-download:hover { background-color: #00ffcc; color: #0d1117; }
+
+    /* Fortschrittsanzeige */
+    .progress-container {
+        width: 100%;
+        height: 20px;
+        background-color: #05070a;
+        border: 1px solid #30363d;
+        border-radius: 3px;
+        position: relative;
+        overflow: hidden;
+        display: none;
+    }
+
+    .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #00ffcc, #ff00ff);
+        box-shadow: 0 0 10px #ff00ff;
+        transition: width 0.1s linear;
+    }
+
+    .progress-text {
+        position: absolute;
+        width: 100%;
+        text-align: center;
+        top: 2px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: #ffffff;
+        text-shadow: 1px 1px 2px #000;
+        pointer-events: none;
+    }
+
+    .status-hud {
+        font-size: 0.8rem;
+        color: #ffd700;
+        text-align: center;
+        min-height: 16px;
+        padding-top: 5px;
+    }
+
+    #engine-video, #engine-audio { display: none; }
+    input[type="file"] { display: none; }
+</style>
+
+<div class="module-wrapper">
+    <div class="module-header">
+        <div>
+            <h3 data-mi18n="m_title">Universal Media Transcoder</h3>
+            <span style="font-size: 0.75rem; color: #8b949e;" data-mi18n="m_desc">Offline HQ Buffer | Audio Extract | MP3 Matrix</span>
+        </div>
+    </div>
+
+    <!-- Die verborgenen "Kopierwerke" -->
+    <video id="engine-video" muted playsinline></video>
+    <audio id="engine-audio" muted></audio>
+    <input type="file" id="file-upload" accept="video/*, audio/*">
+
+    <div class="dashboard">
+        <!-- SEKTOR 1: INPUT -->
+        <div class="panel">
+            <div class="panel-title" data-mi18n="p1_title">📥 Source Ingestion</div>
+            
+            <div class="drop-zone" id="drop-zone">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                <p class="drop-text" data-mi18n="d_drag">Media-Datei hier ablegen</p>
+                <span class="drop-highlight" data-mi18n="d_click">Oder klicken zum Upload</span>
+            </div>
+
+            <div class="info-box" id="info-box">
+                <div class="info-row"><span data-mi18n="i_file">Datei:</span> <span class="info-val" id="val-name">---</span></div>
+                <div class="info-row"><span data-mi18n="i_type">Typ:</span> <span class="info-val" id="val-type">---</span></div>
+                <div class="info-row"><span data-mi18n="i_size">Größe:</span> <span class="info-val" id="val-size">---</span></div>
+                <div class="info-row"><span data-mi18n="i_dur">Dauer:</span> <span class="info-val" id="val-dur">---</span></div>
+            </div>
+        </div>
+
+        <!-- SEKTOR 2: OUTPUT & CONTROL -->
+        <div class="panel">
+            <div class="panel-title" data-mi18n="p2_title">⚙️ Codec Matrix & Export</div>
+            
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label data-mi18n="l_filename">Ausgabe-Dateiname:</label>
+                <input type="text" id="out-filename" class="text-input" placeholder="Warte auf Source..." data-mi18n-placeholder="ph_wait" disabled>
+                
+                <label data-mi18n="l_format">Ziel-Format wählen:</label>
+                <select id="format-select" disabled>
+                    <option value="" data-mi18n="opt_wait">Warte auf Source-Datei...</option>
+                </select>
+            </div>
+
+            <div style="flex: 1;"></div>
+
+            <div class="progress-container" id="progress-ui">
+                <div class="progress-bar" id="progress-bar"></div>
+                <div class="progress-text" id="progress-text">0%</div>
+            </div>
+
+            <button class="btn-core" id="btn-convert" disabled data-mi18n="btn_conv">Transcodierung Starten</button>
+            <button class="btn-core btn-download" id="btn-download" data-mi18n="btn_down">💾 Datei Speichern</button>
+
+            <div class="status-hud" id="hud-status" data-mi18n="h_init">Scanner bereit. Erwarte Datei.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Injektion der LameJS Bibliothek für echten MP3 Export
+    if (typeof lamejs === 'undefined') {
+        const script = document.createElement('script');
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js";
+        document.head.appendChild(script);
+    }
+
+    const root = typeof shadowRoot !== 'undefined' ? shadowRoot : document;
+
+    // ==========================================
+    // 1. STATISCHE & SICHERE i18n ÜBERSETZUNGS-ENGINE
+    // ==========================================
+    const mod_i18n = {
+        lang: localStorage.getItem('arte_lang_pref') || 'de',
+        dict: {
+            de: {
+                m_title: "Universal Media Transcoder",
+                m_desc: "Offline HQ Buffer | Audio Extract | MP3 Matrix",
+                p1_title: "📥 Source Ingestion",
+                d_drag: "Media-Datei hier ablegen",
+                d_click: "Oder klicken zum Upload",
+                i_file: "Datei:", i_type: "Typ:", i_size: "Größe:", i_dur: "Dauer:",
+                p2_title: "⚙️ Codec Matrix & Export",
+                l_filename: "Ausgabe-Dateiname:",
+                ph_wait: "Warte auf Source...",
+                l_format: "Ziel-Format wählen:",
+                opt_wait: "Warte auf Source-Datei...",
+                btn_conv: "Transcodierung Starten",
+                btn_down: "💾 Datei Speichern",
+                h_init: "Scanner bereit. Erwarte Datei.",
+                
+                err_fmt: "Fehler: Dateiformat nicht unterstützt.",
+                h_load: "Analysiere Media-Container...",
+                h_ready: "Datei geladen. Wähle Zielformat.",
+                h_run: "Kopierwerk aktiv. Transcodiere live...",
+                h_run_mp3: "Offline Engine aktiv. Codiere HQ MP3 ohne Dropouts...",
+                h_done: "Konvertierung erfolgreich abgeschlossen.",
+                h_err_trk: "Fehler: Keine Audiospur in diesem Video gefunden.",
+                h_err_sys: "Systemfehler bei der Konvertierung.",
+
+                f_vid_webm: "WebM Video (VP8/VP9)",
+                f_vid_mp4: "MP4 Video (H.264)",
+                
+                f_aud_m4a: "M4A Audio (AAC) - Nativ",
+                f_aud_mp3: "MP3 Audio (192kbps Stereo) - High Quality",
+                f_aud_webm: "WebM Audio (Opus) - Nativ"
+            },
+            en: {
+                m_title: "Universal Media Transcoder",
+                m_desc: "Offline HQ Buffer | Audio Extract | MP3 Matrix",
+                p1_title: "📥 Source Ingestion",
+                d_drag: "Drop media file here",
+                d_click: "Or click to upload",
+                i_file: "File:", i_type: "Type:", i_size: "Size:", i_dur: "Duration:",
+                p2_title: "⚙️ Codec Matrix & Export",
+                l_filename: "Output Filename:",
+                ph_wait: "Waiting for source...",
+                l_format: "Select Target Format:",
+                opt_wait: "Waiting for source file...",
+                btn_conv: "Start Transcoding",
+                btn_down: "💾 Save File",
+                h_init: "Scanner ready. Awaiting file.",
+                
+                err_fmt: "Error: File format not supported.",
+                h_load: "Analyzing media container...",
+                h_ready: "File loaded. Select target format.",
+                h_run: "Engine active. Transcoding live...",
+                h_run_mp3: "Offline Engine active. Encoding HQ MP3 without dropouts...",
+                h_done: "Conversion successfully completed.",
+                h_err_trk: "Error: No audio track found in this video.",
+                h_err_sys: "System error during conversion.",
+
+                f_vid_webm: "WebM Video (VP8/VP9)",
+                f_vid_mp4: "MP4 Video (H.264)",
+                
+                f_aud_m4a: "M4A Audio (AAC) - Native",
+                f_aud_mp3: "MP3 Audio (192kbps Stereo) - High Quality",
+                f_aud_webm: "WebM Audio (Opus) - Native"
+            }
+        },
+
+        t: function(key) { return this.dict[this.lang][key] || key; },
+
+        updateUI: function() {
+            root.querySelectorAll('[data-mi18n]').forEach(el => {
+                el.innerHTML = this.t(el.getAttribute('data-mi18n'));
+            });
+            root.querySelectorAll('[data-mi18n-placeholder]').forEach(el => {
+                el.placeholder = this.t(el.getAttribute('data-mi18n-placeholder'));
+            });
+            Array.from(root.getElementById('format-select').options).forEach(opt => {
+                if(opt.dataset.i18nKey) opt.textContent = this.t(opt.dataset.i18nKey);
+            });
+            const hudNode = root.getElementById('hud-status');
+            if (hudNode && window.currentHudState) {
+                hudNode.textContent = this.t(window.currentHudState);
+            }
+        }
+    };
+
+    window.currentHudState = 'h_init';
+    function setHudState(stateKey, color) {
+        window.currentHudState = stateKey;
+        const hudNode = root.getElementById('hud-status');
+        hudNode.textContent = mod_i18n.t(stateKey);
+        if (color) hudNode.style.color = color;
+    }
+
+    if (window.osBus) {
+        window.osBus.on('lang-changed', (newLang) => {
+            mod_i18n.lang = newLang;
+            mod_i18n.updateUI();
+        });
+    }
+    setTimeout(() => { mod_i18n.updateUI(); }, 50);
+
+    // ==========================================
+    // 2. MODUL LOGIK (Native + HQ Offline LameJS)
+    // ==========================================
+    const dropZone = root.getElementById('drop-zone');
+    const fileInput = root.getElementById('file-upload');
+    const infoBox = root.getElementById('info-box');
+    const formatSelect = root.getElementById('format-select');
+    const outFilenameInput = root.getElementById('out-filename');
+    const btnConvert = root.getElementById('btn-convert');
+    const btnDownload = root.getElementById('btn-download');
+    const progressUI = root.getElementById('progress-ui');
+    const progressBar = root.getElementById('progress-bar');
+    const progressText = root.getElementById('progress-text');
+    
+    const engineVideo = root.getElementById('engine-video');
+    const engineAudio = root.getElementById('engine-audio');
+
+    let currentFileUrl = null;
+    let currentFileType = null;
+    let finalBlobUrl = null;
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        dropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+    ['dragenter', 'dragover'].forEach(evt => {
+        dropZone.addEventListener(evt, () => dropZone.classList.add('dragover'), false);
+    });
+    ['dragleave', 'drop'].forEach(evt => {
+        dropZone.addEventListener(evt, () => dropZone.classList.remove('dragover'), false);
+    });
+
+    dropZone.addEventListener('drop', e => {
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', e => {
+        if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+        if (!file.type.startsWith('video/') && !file.type.startsWith('audio/')) {
+            setHudState('err_fmt', '#ff7b72');
+            return;
+        }
+
+        setHudState('h_load', '#ffd700');
+        btnDownload.style.display = 'none';
+        btnConvert.style.display = 'block';
+        progressUI.style.display = 'none';
+
+        if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
+        currentFileUrl = URL.createObjectURL(file);
+        currentFileType = file.type.startsWith('video/') ? 'video' : 'audio';
+
+        root.getElementById('val-name').textContent = file.name;
+        root.getElementById('val-type').textContent = file.type;
+        root.getElementById('val-size').textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+        
+        const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        outFilenameInput.value = baseName + "_ARTE";
+        outFilenameInput.disabled = false;
+
+        const mediaEl = currentFileType === 'video' ? engineVideo : engineAudio;
+        mediaEl.src = currentFileUrl;
+        
+        mediaEl.onloadedmetadata = () => {
+            const mins = Math.floor(mediaEl.duration / 60);
+            const secs = Math.floor(mediaEl.duration % 60);
+            root.getElementById('val-dur').textContent = `${mins}m ${secs}s`;
+            
+            infoBox.style.display = 'block';
+            buildFormatMatrix(currentFileType);
+            setHudState('h_ready', '#00ffcc');
+        };
+    }
+
+    function buildFormatMatrix(type) {
+        formatSelect.innerHTML = '';
+        formatSelect.disabled = false;
+        btnConvert.disabled = false;
+
+        const addNativeOpt = (mime, key, ext, typeFlag) => {
+            if (MediaRecorder.isTypeSupported(mime)) {
+                const opt = document.createElement('option');
+                opt.value = JSON.stringify({ mime, ext, typeFlag, isMP3: false });
+                opt.dataset.i18nKey = key;
+                opt.textContent = mod_i18n.t(key);
+                formatSelect.appendChild(opt);
+            }
+        };
+
+        const addMp3Opt = () => {
+            const opt = document.createElement('option');
+            opt.value = JSON.stringify({ mime: 'audio/mp3', ext: 'mp3', typeFlag: 'audio_extract', isMP3: true });
+            opt.dataset.i18nKey = 'f_aud_mp3';
+            opt.textContent = mod_i18n.t('f_aud_mp3');
+            formatSelect.appendChild(opt);
+        };
+
+        if (type === 'video') {
+            addNativeOpt('video/mp4', 'f_vid_mp4', 'mp4', 'video');
+            addNativeOpt('video/webm; codecs=vp8', 'f_vid_webm', 'webm', 'video');
+        }
+        
+        addMp3Opt(); 
+        addNativeOpt('audio/mp4', 'f_aud_m4a', 'm4a', 'audio_extract');
+        addNativeOpt('audio/webm; codecs=opus', 'f_aud_webm', 'weba', 'audio_extract');
+    }
+
+    function finalizeExport(blob, ext) {
+        if (finalBlobUrl) URL.revokeObjectURL(finalBlobUrl);
+        finalBlobUrl = URL.createObjectURL(blob);
+        
+        btnConvert.style.display = 'none';
+        btnDownload.style.display = 'block';
+        btnDownload.dataset.ext = ext;
+        formatSelect.disabled = false;
+        outFilenameInput.disabled = false;
+        
+        progressBar.style.width = `100%`;
+        progressText.textContent = `100%`;
+        
+        setHudState('h_done', '#00ffcc');
+        if (window.osBus) window.osBus.emit('log', { msg: `Media Transcoding abgeschlossen: .${ext}` });
+    }
+
+    btnConvert.addEventListener('click', async () => {
+        const config = JSON.parse(formatSelect.value);
+        const mediaEl = currentFileType === 'video' ? engineVideo : engineAudio;
+        
+        btnConvert.disabled = true;
+        formatSelect.disabled = true;
+        outFilenameInput.disabled = true;
+        progressUI.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = '0%';
+
+        try {
+            // === NEUE OFFLINE LAMEJS MP3 ENGINE (ZERO DROPOUTS) ===
+            if (config.isMP3) {
+                if (typeof lamejs === 'undefined') throw new Error("LameJS not loaded");
+                setHudState('h_run_mp3', '#ff00ff');
+
+                // 1. Gesamte Datei in den Speicher laden
+                const response = await fetch(currentFileUrl);
+                const arrayBuffer = await response.arrayBuffer();
+
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const audioCtx = new AudioContext();
+
+                // 2. Audio direkt encodieren (Unabhängig von Echtzeit-Wiedergabe!)
+                const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                const sampleRate = audioBuffer.sampleRate || 44100;
+                const channels = audioBuffer.numberOfChannels; // Support für Stereo!
+                
+                // 192kbps High Quality Encoding
+                const mp3Encoder = new lamejs.Mp3Encoder(channels, sampleRate, 192); 
+                const mp3Data = [];
+
+                const sampleBlockSize = 1152; 
+                const left = audioBuffer.getChannelData(0);
+                const right = channels > 1 ? audioBuffer.getChannelData(1) : left;
+                const length = left.length;
+
+                let i = 0;
+
+                // 3. Asynchrones Chunking (Verhindert das Einfrieren des Browsers)
+                function encodeChunk() {
+                    const end = Math.min(i + sampleBlockSize * 50, length);
+
+                    for (; i < end; i += sampleBlockSize) {
+                        const chunkLen = Math.min(sampleBlockSize, length - i);
+                        const leftInt16 = new Int16Array(chunkLen);
+                        const rightInt16 = new Int16Array(chunkLen);
+
+                        for (let j = 0; j < chunkLen; j++) {
+                            // Hard Clamp: Eliminiert jegliches Clipping/Knacken
+                            let sl = Math.max(-1, Math.min(1, left[i + j]));
+                            let sr = Math.max(-1, Math.min(1, right[i + j]));
+                            leftInt16[j] = sl < 0 ? sl * 32768 : sl * 32767;
+                            rightInt16[j] = sr < 0 ? sr * 32768 : sr * 32767;
+                        }
+
+                        let mp3buf;
+                        if (channels === 2) {
+                            mp3buf = mp3Encoder.encodeBuffer(leftInt16, rightInt16);
+                        } else {
+                            mp3buf = mp3Encoder.encodeBuffer(leftInt16);
+                        }
+
+                        if (mp3buf.length > 0) mp3Data.push(new Int8Array(mp3buf));
+                    }
+
+                    // Progress Update
+                    const pct = Math.min((i / length) * 100, 100);
+                    progressBar.style.width = `${pct}%`;
+                    progressText.textContent = `${pct.toFixed(1)}%`;
+
+                    if (i < length) {
+                        requestAnimationFrame(encodeChunk);
+                    } else {
+                        // Fertig!
+                        const mp3buf = mp3Encoder.flush();
+                        if (mp3buf.length > 0) mp3Data.push(new Int8Array(mp3buf));
+
+                        const blob = new Blob(mp3Data, { type: 'audio/mp3' });
+                        finalizeExport(blob, config.ext);
+                    }
+                }
+
+                encodeChunk(); // Startet den High-Speed Export
+
+            } 
+            // === NATIVE MEDIA RECORDER ROUTE (MP4, WebM, M4A) ===
+            else {
+                setHudState('h_run', '#ff00ff');
+
+                mediaEl.currentTime = 0;
+                await mediaEl.play();
+
+                let stream;
+                if (mediaEl.captureStream) stream = mediaEl.captureStream();
+                else if (mediaEl.mozCaptureStream) stream = mediaEl.mozCaptureStream();
+
+                if (config.typeFlag === 'audio_extract') {
+                    if (stream.getAudioTracks().length === 0) throw new Error("NoAudioTrack");
+                    stream = new MediaStream(stream.getAudioTracks());
+                }
+
+                const recorder = new MediaRecorder(stream, { mimeType: config.mime });
+                const chunks = [];
+                recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+                
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: config.mime });
+                    finalizeExport(blob, config.ext);
+                };
+
+                recorder.start();
+
+                function updateLoopNative() {
+                    if (mediaEl.ended || mediaEl.paused) return;
+                    const pct = Math.min((mediaEl.currentTime / mediaEl.duration) * 100, 100);
+                    progressBar.style.width = `${pct}%`;
+                    progressText.textContent = `${pct.toFixed(1)}%`;
+                    requestAnimationFrame(updateLoopNative);
+                }
+                updateLoopNative();
+
+                mediaEl.onended = () => { recorder.stop(); };
+            }
+
+        } catch (err) {
+            console.error(err);
+            mediaEl.pause();
+            btnConvert.disabled = false;
+            formatSelect.disabled = false;
+            outFilenameInput.disabled = false;
+            progressUI.style.display = 'none';
+            if (err.message === "NoAudioTrack") {
+                setHudState('h_err_trk', '#ff7b72');
+            } else {
+                setHudState('h_err_sys', '#ff7b72');
+            }
+        }
+    });
+
+    btnDownload.addEventListener('click', () => {
+        if (!finalBlobUrl) return;
+        const ext = btnDownload.dataset.ext || 'media';
+        
+        let fname = outFilenameInput.value.trim();
+        if (!fname) fname = `ARTE_Convert_${new Date().getTime()}`;
+        
+        const a = document.createElement('a');
+        a.href = finalBlobUrl;
+        a.download = `${fname}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
+
+</script>

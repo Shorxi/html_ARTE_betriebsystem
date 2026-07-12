@@ -1,0 +1,916 @@
+<style>
+    .module-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        max-height: 850px;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        color: #c9d1d9;
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+    }
+
+    .module-header {
+        border-bottom: 1px solid #30363d;
+        padding: 10px 15px;
+        background-color: #161b22;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .module-header h3 {
+        color: #00ffcc;
+        margin: 0;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    /* Kinetische & Sticky Werkzeugleiste */
+    .toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background-color: #161b22;
+        border-bottom: 1px solid #30363d;
+        padding: 8px 15px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .toolbar-group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        border-right: 1px solid #30363d;
+        padding-right: 8px;
+    }
+
+    .btn-tool {
+        background: transparent;
+        border: 1px solid transparent;
+        color: #c9d1d9;
+        cursor: pointer;
+        padding: 6px 10px;
+        font-size: 0.9rem;
+        border-radius: 3px;
+        transition: all 0.2s;
+        font-weight: bold;
+    }
+
+    .btn-tool:hover {
+        background-color: #30363d;
+        color: #00ffcc;
+    }
+
+    .btn-tool[data-active="true"] {
+        background-color: rgba(0, 255, 204, 0.1);
+        border-color: #00ffcc;
+        color: #00ffcc;
+    }
+
+    select,
+    input[type="number"],
+    input[type="text"] {
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        padding: 6px;
+        font-size: 0.85rem;
+        border-radius: 3px;
+    }
+
+    select:focus,
+    input:focus {
+        outline: none;
+        border-color: #ff00ff;
+    }
+
+    /* Neue Color-Picker Styles */
+    .color-picker {
+        padding: 0;
+        width: 26px;
+        height: 26px;
+        border: 1px solid #30363d;
+        border-radius: 3px;
+        cursor: pointer;
+        background: transparent;
+    }
+
+    .color-picker::-webkit-color-swatch-wrapper {
+        padding: 0;
+    }
+
+    .color-picker::-webkit-color-swatch {
+        border: none;
+        border-radius: 2px;
+    }
+
+    /* Editor-Raum (Dark Mode Container) */
+    .editor-viewport {
+        flex: 1;
+        overflow-y: auto;
+        padding: 30px 10px;
+        background-color: #05070a;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+    }
+
+    /* Das physische DIN-A4 Blatt (Endlos-Papier Modus) */
+    .a4-page {
+        width: 210mm;
+        min-height: 297mm;
+        height: fit-content;
+        background-color: #ffffff;
+        color: #000000;
+        padding: 25mm 20mm;
+        box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        outline: none;
+        font-family: 'Arial', sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+        overflow-wrap: break-word;
+    }
+
+    .a4-page table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 15px 0;
+    }
+
+    .a4-page table,
+    .a4-page th,
+    .a4-page td {
+        border: 1px solid #333;
+        padding: 8px;
+    }
+
+    .a4-page th {
+        background-color: #f0f0f0;
+    }
+
+    .a4-page .img-wrapper {
+        display: inline-block;
+        resize: both;
+        overflow: hidden;
+        border: 1px dashed transparent;
+        position: relative;
+        max-width: 100%;
+    }
+
+    .a4-page .img-wrapper:hover,
+    .a4-page .img-wrapper.active {
+        border-color: #ff00ff;
+    }
+
+    .a4-page .img-wrapper img {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    .a4-page hr.page-break {
+        width: 100%;
+        height: 4px;
+        margin: 20px 0;
+        background: repeating-linear-gradient(to right, #ff00ff, #ff00ff 10px, transparent 10px, transparent 20px);
+        border: none;
+        page-break-after: always;
+        break-after: page;
+        cursor: pointer;
+    }
+
+    /* Footer / I-O Sektor */
+    .io-footer {
+        background-color: #161b22;
+        border-top: 1px solid #30363d;
+        padding: 10px 15px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-io {
+        padding: 8px 15px;
+        background-color: transparent;
+        border: 1px solid #00ffcc;
+        color: #00ffcc;
+        cursor: pointer;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+    }
+
+    .btn-io:hover {
+        background-color: #00ffcc;
+        color: #0d1117;
+    }
+
+    .btn-io.export {
+        border-color: #ff00ff;
+        color: #ff00ff;
+    }
+
+    .btn-io.export:hover {
+        background-color: #ff00ff;
+        color: #0d1117;
+    }
+
+    input[type="file"] {
+        display: none;
+    }
+
+    .status-msg {
+        margin-left: auto;
+        font-size: 0.8rem;
+        color: #ffd700;
+    }
+</style>
+
+<div class="module-wrapper">
+    <div class="module-header">
+        <h3 data-mi18n="m_title">Advanced Document Synthesis Matrix</h3>
+        <span style="font-size: 0.75rem; color: #8b949e;" data-mi18n="m_desc">WYSIWYG A4-Simulation, Drag&Drop, Multi-Format I/O</span>
+    </div>
+
+    <div class="toolbar" id="doc-toolbar">
+        <div class="toolbar-group">
+            <select id="sel-font" data-mi18n-title="t_font" title="Schriftart" style="width: 120px;">
+                <option value="Arial">Arial</option>
+                <option value="'Times New Roman'">Times New Roman</option>
+                <option value="'Courier New'">Courier New</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Tahoma">Tahoma</option>
+                <option value="'Trebuchet MS'">Trebuchet MS</option>
+                <option value="Impact">Impact</option>
+                <option value="'Comic Sans MS'">Comic Sans</option>
+            </select>
+
+            <select id="sel-size" data-mi18n-title="t_size" title="Schriftgröße">
+                <option value="1" data-mi18n="s_mic">10px (Mikro)</option>
+                <option value="2" data-mi18n="s_sma">13px (Klein)</option>
+                <option value="3" selected data-mi18n="s_std">16px (Standard)</option>
+                <option value="4" data-mi18n="s_lrg">18px (Groß)</option>
+                <option value="5" data-mi18n="s_tit">24px (Titel)</option>
+                <option value="6" data-mi18n="s_hdr">32px (Header)</option>
+                <option value="7" data-mi18n="s_max">48px (Maximal)</option>
+            </select>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="btn-tool" data-cmd="bold" data-mi18n-title="t_bold" title="Fett"><b>B</b></button>
+            <button class="btn-tool" data-cmd="italic" data-mi18n-title="t_ital" title="Kursiv"><i>I</i></button>
+            <button class="btn-tool" data-cmd="underline" data-mi18n-title="t_undr" title="Unterstrichen"><u>U</u></button>
+            <button class="btn-tool" data-cmd="strikeThrough" data-mi18n-title="t_strk" title="Durchgestrichen"><s>S</s></button>
+        </div>
+
+        <div class="toolbar-group">
+            <label style="font-size:0.75rem; color:#8b949e; margin-right: 2px;">T</label>
+            <input type="color" id="inp-color" value="#000000" data-mi18n-title="t_tcol" title="Textfarbe" class="color-picker">
+
+            <label style="font-size:0.75rem; color:#8b949e; margin: 0 2px 0 8px;">✎</label>
+            <input type="color" id="inp-bg-color" value="#ffff00" data-mi18n-title="t_bcol" title="Text-Hintergrundfarbe (Marker)" class="color-picker">
+        </div>
+
+        <div class="toolbar-group">
+            <button class="btn-tool" data-cmd="justifyLeft" data-mi18n-title="t_left" title="Linksbündig">⇤</button>
+            <button class="btn-tool" data-cmd="justifyCenter" data-mi18n-title="t_cent" title="Zentriert">⇥⇤</button>
+            <button class="btn-tool" data-cmd="justifyRight" data-mi18n-title="t_rght" title="Rechtsbündig">⇥</button>
+        </div>
+
+        <div class="toolbar-group">
+            <select id="sel-lineheight" data-mi18n-title="t_line" title="Zeilenabstand">
+                <option value="1.0" data-mi18n="lh_10">Abstand: 1.0</option>
+                <option value="1.5" selected data-mi18n="lh_15">Abstand: 1.5</option>
+                <option value="2.0" data-mi18n="lh_20">Abstand: 2.0</option>
+            </select>
+
+            <button class="btn-tool" id="btn-page-break" data-mi18n-title="t_pb" data-mi18n="btn_pb" title="Erzwingt eine neue A4 Seite im PDF/Druck">✂ Seitenumbruch</button>
+        </div>
+
+        <div class="toolbar-group">
+            <label style="font-size:0.75rem; color:#8b949e;" data-mi18n="l_marg">Ränder (L/R mm):</label>
+            <input type="number" id="inp-margin-lr" value="20" min="0" max="100" style="width: 50px;">
+        </div>
+    </div>
+
+    <div class="editor-viewport" id="viewport">
+        <div class="a4-page" id="document-editor" contenteditable="true" spellcheck="false">
+            <h2 data-mi18n="ed_h2">Neues Zieldokument</h2>
+            <p data-mi18n="ed_p">Beginne hier mit dem Schreiben. Das Papier wächst automatisch endlos nach unten mit. Beim Speichern als PDF werden die Seiten sauber getrennt.</p>
+        </div>
+    </div>
+
+    <div class="io-footer">
+        <input type="file" id="file-import" accept=".txt,.md,.html">
+        <button class="btn-io" id="btn-trigger-import" data-mi18n="btn_imp">📂 Dokument Laden</button>
+
+        <div style="border-left: 1px solid #30363d; height: 30px; margin: 0 10px;"></div>
+
+        <input type="text" id="doc-filename" value="ARTE_Dokument" style="width: 150px;">
+
+        <select id="doc-format">
+            <option value="pdf" data-mi18n="f_pdf">.PDF Format (A4 Seiten)</option>
+            <option value="html" data-mi18n="f_html">.HTML (Google Docs Ready)</option>
+            <option value="md" data-mi18n="f_md">.MD (Markdown)</option>
+            <option value="txt" data-mi18n="f_txt">.TXT (Plain Text)</option>
+        </select>
+
+        <button class="btn-io export" id="btn-export" data-mi18n="btn_exp">Exportieren</button>
+        <div class="status-msg" id="io-status" data-mi18n="s_ready">System betriebsbereit.</div>
+    </div>
+</div>
+
+<script>
+    const root = typeof shadowRoot !== 'undefined' ? shadowRoot : document;
+
+    // ==========================================
+    // 1. STATISCHE & SICHERE i18n ÜBERSETZUNGS-ENGINE
+    // ==========================================
+    const mod_i18n = {
+        lang: localStorage.getItem('arte_lang_pref') || 'de',
+        dict: {
+            de: {
+                m_title: "Advanced Document Synthesis Matrix",
+                m_desc: "WYSIWYG A4-Simulation, Drag&Drop, Multi-Format I/O",
+
+                t_font: "Schriftart",
+                t_size: "Schriftgröße",
+
+                s_mic: "10px (Mikro)",
+                s_sma: "13px (Klein)",
+                s_std: "16px (Standard)",
+                s_lrg: "18px (Groß)",
+                s_tit: "24px (Titel)",
+                s_hdr: "32px (Header)",
+                s_max: "48px (Maximal)",
+
+                t_bold: "Fett",
+                t_ital: "Kursiv",
+                t_undr: "Unterstrichen",
+                t_strk: "Durchgestrichen",
+
+                t_tcol: "Textfarbe",
+                t_bcol: "Text-Hintergrundfarbe (Marker)",
+
+                t_left: "Linksbündig",
+                t_cent: "Zentriert",
+                t_rght: "Rechtsbündig",
+                t_line: "Zeilenabstand",
+
+                lh_10: "Abstand: 1.0",
+                lh_15: "Abstand: 1.5",
+                lh_20: "Abstand: 2.0",
+
+                btn_pb: "✂ Seitenumbruch",
+                t_pb: "Erzwingt eine neue A4 Seite im PDF/Druck",
+
+                l_marg: "Ränder (L/R mm):",
+
+                ed_h2: "Neues Zieldokument",
+                ed_p: "Beginne hier mit dem Schreiben. Das Papier wächst automatisch endlos nach unten mit. Beim Speichern als PDF werden die Seiten sauber getrennt.",
+
+                btn_imp: "📂 Dokument Laden",
+
+                f_pdf: ".PDF Format (A4 Seiten)",
+                f_html: ".HTML (Google Docs Ready)",
+                f_md: ".MD (Markdown)",
+                f_txt: ".TXT (Plain Text)",
+
+                btn_exp: "Exportieren",
+                s_ready: "System betriebsbereit.",
+
+                // JS Dynamische Strings
+                hr_title: "Seitenumbruch (Klicken oder Backspace zum Löschen)",
+                err_doc: "Fehler: Word-Dokumente (.doc/.docx) werden nicht unterstützt.",
+                s_load: "Lade Dokument...",
+                d_load1: "Dokument '",
+                d_load2: "' geladen.",
+                s_prep1: "Bereite ",
+                s_prep2: "-Export vor...",
+                s_exp: "Export abgeschlossen.",
+                s_html: "HTML bereit. In Google Drive ziehen zum Öffnen.",
+                s_pdf: "PDF-Drucker-Spooling initiiert."
+            },
+            en: {
+                m_title: "Advanced Document Synthesis Matrix",
+                m_desc: "WYSIWYG A4-Simulation, Drag&Drop, Multi-Format I/O",
+
+                t_font: "Font",
+                t_size: "Font Size",
+
+                s_mic: "10px (Micro)",
+                s_sma: "13px (Small)",
+                s_std: "16px (Standard)",
+                s_lrg: "18px (Large)",
+                s_tit: "24px (Title)",
+                s_hdr: "32px (Header)",
+                s_max: "48px (Maximum)",
+
+                t_bold: "Bold",
+                t_ital: "Italic",
+                t_undr: "Underline",
+                t_strk: "Strikethrough",
+
+                t_tcol: "Text Color",
+                t_bcol: "Background Color (Marker)",
+
+                t_left: "Align Left",
+                t_cent: "Align Center",
+                t_rght: "Align Right",
+                t_line: "Line Spacing",
+
+                lh_10: "Spacing: 1.0",
+                lh_15: "Spacing: 1.5",
+                lh_20: "Spacing: 2.0",
+
+                btn_pb: "✂ Page Break",
+                t_pb: "Forces a new A4 page in PDF/Print",
+
+                l_marg: "Margins (L/R mm):",
+
+                ed_h2: "New Target Document",
+                ed_p: "Start writing here. The paper automatically grows endlessly downwards. When saving as PDF, pages are cleanly separated.",
+
+                btn_imp: "📂 Load Document",
+
+                f_pdf: ".PDF Format (A4 Pages)",
+                f_html: ".HTML (Google Docs Ready)",
+                f_md: ".MD (Markdown)",
+                f_txt: ".TXT (Plain Text)",
+
+                btn_exp: "Export",
+                s_ready: "System ready.",
+
+                // JS Dynamische Strings
+                hr_title: "Page Break (Click or Backspace to delete)",
+                err_doc: "Error: Word documents (.doc/.docx) are not supported.",
+                s_load: "Loading document...",
+                d_load1: "Document '",
+                d_load2: "' loaded.",
+                s_prep1: "Preparing ",
+                s_prep2: " export...",
+                s_exp: "Export completed.",
+                s_html: "HTML ready. Drag into Google Drive to open.",
+                s_pdf: "PDF printer spooling initiated."
+            }
+        },
+        t: function(key) {
+            return this.dict[this.lang][key] || key;
+        },
+        updateUI: function() {
+            root.querySelectorAll('[data-mi18n]').forEach(el => {
+                el.innerHTML = this.t(el.getAttribute('data-mi18n'));
+            });
+
+            root.querySelectorAll('[data-mi18n-title]').forEach(el => {
+                el.title = this.t(el.getAttribute('data-mi18n-title'));
+            });
+        }
+    };
+
+    if (window.osBus) {
+        window.osBus.on('lang-changed', (newLang) => {
+            mod_i18n.lang = newLang;
+            mod_i18n.updateUI();
+        });
+    }
+
+    setTimeout(() => {
+        mod_i18n.updateUI();
+    }, 50);
+
+    // ==========================================
+    // 2. ORIGINAL MODUL LOGIK (Mit sicheren Inline-Übersetzungen)
+    // ==========================================
+    const editor = root.getElementById('document-editor');
+    const toolbar = root.getElementById('doc-toolbar');
+    const ioStatus = root.getElementById('io-status');
+    const marginInput = root.getElementById('inp-margin-lr');
+    const lineheightSelect = root.getElementById('sel-lineheight');
+    const fileImport = root.getElementById('file-import');
+
+    // Farb-Elemente
+    const colorPicker = root.getElementById('inp-color');
+    const bgColorPicker = root.getElementById('inp-bg-color');
+
+    // --- 1. WYSIWYG Editor Core Logik ---
+    toolbar.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-tool');
+        if (!btn || !btn.dataset.cmd) return;
+
+        const cmd = btn.dataset.cmd;
+        document.execCommand(cmd, false, null);
+        editor.focus();
+    });
+
+    root.getElementById('sel-font').addEventListener('change', (e) => {
+        document.execCommand('fontName', false, e.target.value);
+        editor.focus();
+    });
+
+    root.getElementById('sel-size').addEventListener('change', (e) => {
+        document.execCommand('fontSize', false, e.target.value);
+        editor.focus();
+    });
+
+    colorPicker.addEventListener('input', (e) => {
+        document.execCommand('foreColor', false, e.target.value);
+        editor.focus();
+    });
+
+    bgColorPicker.addEventListener('input', (e) => {
+        document.execCommand('hiliteColor', false, e.target.value);
+        document.execCommand('backColor', false, e.target.value);
+        editor.focus();
+    });
+
+    /*
+        FIX: Zeilenabstand stabil repariert.
+
+        Vorher:
+        - range.surroundContents(span) wurde benutzt.
+        - Das bricht bei komplexen Markierungen häufig ab.
+        - Außerdem wirkt line-height auf einem inline-span oft nicht zuverlässig.
+
+        Jetzt:
+        - Bei markiertem Text werden die betroffenen Block-Elemente gesucht.
+        - Der line-height-Wert wird direkt auf p, div, h1, h2, li usw. gesetzt.
+        - Ohne Markierung wird der Standard-Zeilenabstand des gesamten Editors geändert.
+    */
+    function getEditorSelection() {
+        if (root && typeof root.getSelection === 'function') {
+            return root.getSelection();
+        }
+
+        return window.getSelection();
+    }
+
+    function nodeInsideEditor(node) {
+        if (!node) return false;
+
+        if (node.nodeType === Node.TEXT_NODE) {
+            node = node.parentNode;
+        }
+
+        return node === editor || editor.contains(node);
+    }
+
+    function getClosestEditableBlock(node) {
+        if (!node) return editor;
+
+        if (node.nodeType === Node.TEXT_NODE) {
+            node = node.parentNode;
+        }
+
+        const blockSelector = 'p, div, h1, h2, h3, h4, h5, h6, li, blockquote, pre, table, th, td';
+
+        while (node && node !== editor) {
+            if (node.matches && node.matches(blockSelector)) {
+                return node;
+            }
+
+            node = node.parentNode;
+        }
+
+        return editor;
+    }
+
+    function applyLineHeightToSelection(value) {
+        const selection = getEditorSelection();
+
+        if (!selection || selection.rangeCount === 0 || !nodeInsideEditor(selection.anchorNode)) {
+            editor.style.lineHeight = value;
+            return;
+        }
+
+        const range = selection.getRangeAt(0);
+
+        if (selection.isCollapsed) {
+            editor.style.lineHeight = value;
+            return;
+        }
+
+        const blockSelector = 'p, div, h1, h2, h3, h4, h5, h6, li, blockquote, pre, table, th, td';
+        const blocks = Array.from(editor.querySelectorAll(blockSelector)).filter(block => {
+            try {
+                return range.intersectsNode(block);
+            } catch (err) {
+                return false;
+            }
+        });
+
+        if (blocks.length > 0) {
+            blocks.forEach(block => {
+                block.style.lineHeight = value;
+            });
+        } else {
+            const startBlock = getClosestEditableBlock(range.startContainer);
+            const endBlock = getClosestEditableBlock(range.endContainer);
+
+            startBlock.style.lineHeight = value;
+
+            if (endBlock && endBlock !== startBlock) {
+                endBlock.style.lineHeight = value;
+            }
+        }
+    }
+
+    lineheightSelect.addEventListener('change', (e) => {
+        applyLineHeightToSelection(e.target.value);
+        editor.focus();
+    });
+
+    marginInput.addEventListener('input', (e) => {
+        const mm = e.target.value;
+        editor.style.paddingLeft = `${mm}mm`;
+        editor.style.paddingRight = `${mm}mm`;
+    });
+
+    root.getElementById('btn-page-break').addEventListener('click', () => {
+        // Sicher übersetzter Hover-Title, die HR-Mechanik bleibt identisch!
+        document.execCommand('insertHTML', false, '<hr class="page-break" title="' + mod_i18n.t('hr_title') + '">');
+        editor.focus();
+    });
+
+    editor.addEventListener('click', (e) => {
+        if (e.target.classList.contains('page-break')) {
+            e.target.remove();
+        }
+    });
+
+    // --- 2. Kinetische Bild-Injektion (Drag&Drop / Paste mit Resize-Mechanik) ---
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        window.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function insertResizableImage(base64Src) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'img-wrapper';
+        wrapper.contentEditable = "false";
+
+        const img = document.createElement('img');
+        img.src = base64Src;
+
+        wrapper.appendChild(img);
+
+        const selection = getEditorSelection();
+
+        if (selection && selection.rangeCount > 0 && nodeInsideEditor(selection.anchorNode)) {
+            const range = selection.getRangeAt(0);
+            range.insertNode(wrapper);
+            range.setStartAfter(wrapper);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        } else {
+            editor.appendChild(wrapper);
+        }
+    }
+
+    editor.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+
+        for (const item of items) {
+            if (item.type.indexOf('image') === 0) {
+                e.preventDefault();
+
+                const blob = item.getAsFile();
+                const reader = new FileReader();
+
+                reader.onload = (event) => insertResizableImage(event.target.result);
+                reader.readAsDataURL(blob);
+            }
+        }
+    });
+
+    editor.addEventListener('drop', (e) => {
+        e.preventDefault();
+
+        const file = e.dataTransfer.files[0];
+
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+
+            reader.onload = (event) => insertResizableImage(event.target.result);
+            reader.readAsDataURL(file);
+        }
+    });
+
+    editor.addEventListener('dragover', (e) => e.preventDefault());
+
+    // --- 3. Multi-Format Import / I-O Relais ---
+    root.getElementById('btn-trigger-import').addEventListener('click', () => fileImport.click());
+
+    fileImport.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+
+        if (!file) return;
+
+        const ext = file.name.split('.').pop().toLowerCase();
+
+        if (ext === 'doc' || ext === 'docx') {
+            ioStatus.textContent = mod_i18n.t('err_doc');
+            ioStatus.style.color = "#ff7b72";
+            e.target.value = '';
+            return;
+        }
+
+        ioStatus.textContent = mod_i18n.t('s_load');
+
+        const reader = new FileReader();
+
+        reader.onload = (event) => {
+            const content = event.target.result;
+
+            if (ext === 'html') {
+                const match = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                editor.innerHTML = match ? match[1] : content;
+            } else if (ext === 'md') {
+                let html = content
+                    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                    .replace(/\*\*(.*?)\*\*/gim, '<b>$1</b>')
+                    .replace(/\*(.*?)\*/gim, '<i>$1</i>')
+                    .replace(/\n/gim, '<br>');
+
+                editor.innerHTML = html;
+            } else {
+                editor.innerText = content;
+            }
+
+            ioStatus.textContent = mod_i18n.t('d_load1') + file.name + mod_i18n.t('d_load2');
+            ioStatus.style.color = "#00ffcc";
+        };
+
+        reader.readAsText(file);
+        e.target.value = '';
+    });
+
+    // --- 4. Asynchrone Export Engine (PDF, HTML, MD, TXT) ---
+    function downloadBlob(content, filename, contentType) {
+        const blob = new Blob([content], { type: contentType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        a.href = url;
+        a.download = filename;
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        URL.revokeObjectURL(url);
+    }
+
+    root.getElementById('btn-export').addEventListener('click', () => {
+        const filename = root.getElementById('doc-filename').value || 'ARTE_Dokument';
+        const format = root.getElementById('doc-format').value;
+        const currentLineHeight = editor.style.lineHeight || lineheightSelect.value || '1.5';
+
+        ioStatus.textContent = mod_i18n.t('s_prep1') + format.toUpperCase() + mod_i18n.t('s_prep2');
+        ioStatus.style.color = "#ffd700";
+
+        if (format === 'txt') {
+            downloadBlob(editor.innerText, `${filename}.txt`, 'text/plain');
+            ioStatus.textContent = mod_i18n.t('s_exp');
+        }
+
+        else if (format === 'html') {
+            const htmlContent = `<!DOCTYPE html>
+            <html lang="de">
+            <head>
+                <meta charset="UTF-8">
+                <title>${filename}</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: ${currentLineHeight}; padding: 20px;">
+                ${editor.innerHTML}
+            </body>
+            </html>`;
+
+            downloadBlob(htmlContent, `${filename}.html`, 'text/html');
+            ioStatus.textContent = mod_i18n.t('s_html');
+        }
+
+        else if (format === 'md') {
+            let md = editor.innerHTML
+                .replace(/<h1>(.*?)<\/h1>/gi, '# $1\n')
+                .replace(/<h2>(.*?)<\/h2>/gi, '## $1\n')
+                .replace(/<h3>(.*?)<\/h3>/gi, '### $1\n')
+                .replace(/<b>(.*?)<\/b>|<strong>(.*?)<\/strong>/gi, '**$1$2**')
+                .replace(/<i>(.*?)<\/i>|<em>(.*?)<\/em>/gi, '*$1$2*')
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<p>(.*?)<\/p>/gi, '$1\n\n')
+                .replace(/<[^>]+>/g, '');
+
+            downloadBlob(md, `${filename}.md`, 'text/markdown');
+            ioStatus.textContent = mod_i18n.t('s_exp');
+        }
+
+        else if (format === 'pdf') {
+            const printWindow = window.open('', '_blank');
+            const sheetContent = editor.innerHTML;
+            const currentPadding = editor.style.paddingLeft || '20mm';
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${filename}</title>
+                    <style>
+                        @page {
+                            size: A4;
+                            margin: 0;
+                        }
+
+                        body {
+                            background-color: #ffffff;
+                            color: #000000;
+                            font-family: 'Arial', sans-serif;
+                            font-size: 16px;
+                            line-height: ${currentLineHeight};
+                            padding: 25mm ${currentPadding};
+                        }
+
+                        table {
+                            border-collapse: collapse;
+                            width: 100%;
+                            margin: 15px 0;
+                        }
+
+                        th,
+                        td {
+                            border: 1px solid #000;
+                            padding: 8px;
+                        }
+
+                        img {
+                            max-width: 100%;
+                            height: auto;
+                        }
+
+                        .img-wrapper {
+                            display: inline-block;
+                            max-width: 100%;
+                            border: none;
+                        }
+
+                        hr.page-break {
+                            break-after: page;
+                            page-break-after: always;
+                            border: none;
+                            height: 0;
+                            background: none;
+                            margin: 0;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${sheetContent}
+
+                    <script>
+                        window.onload = function() {
+                            window.print();
+
+                            setTimeout(function() {
+                                window.close();
+                            }, 500);
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+
+            printWindow.document.close();
+            ioStatus.textContent = mod_i18n.t('s_pdf');
+        }
+
+        ioStatus.style.color = "#00ffcc";
+
+        // Zweiseitiger Reset-Check, absolut mechanik-sicher!
+        setTimeout(() => {
+            if (
+                ioStatus.textContent.includes("initiiert") ||
+                ioStatus.textContent.includes("abgeschlossen") ||
+                ioStatus.textContent.includes("initiated") ||
+                ioStatus.textContent.includes("completed")
+            ) {
+                ioStatus.textContent = mod_i18n.t('s_ready');
+            }
+        }, 3000);
+    });
+</script>
