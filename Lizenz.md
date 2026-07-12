@@ -1,11 +1,12 @@
 # A.R.T.E. Open Origin Architektur-Lizenz (AOoL)
-
 **Projekt:** A.R.T.E. Betriebssystem & Framework (Inklusive aller HTML/JS/CSS Module)
 **Hauptentwickler / Lead Architect:** Emanuel Schaaf
 **Standort:** Pirmasens, Rheinland-Pfalz, Deutschland
 **Kontakt:** serviceblend@gmail.com
 
 ---
+
+## 🇩🇪 Deutsch
 
 ## Präambel
 Das A.R.T.E.-Betriebssystem ist ein innovatives, browserbasiertes Framework, das durch präzise KI-Steuerung und unerschütterliche menschliche Systemarchitektur erschaffen wurde. 
@@ -37,3 +38,38 @@ Die Software und alle Module werden "wie besehen" (as-is) ohne jegliche ausdrüc
 
 ---
 *Erstellt durch Emanuel Schaaf – Pirmasens, Rheinland-Pfalz.*
+
+---
+
+## 🇬🇧 English
+
+## Preamble
+The A.R.T.E. operating system is an innovative, browser-based framework created through precise AI control and steadfast human system architecture.
+
+The vision of this project is—inspired by the foundational principles of Linux—to create an open and free platform for all people. Anyone with knowledge of HTML or web development is hereby cordially invited to use the system, explore it, and actively further develop it through their own module extensions.
+
+Due to its modular structure, the framework not only offers enormous potential for developers and enthusiasts, but is also expressly intended for use in scientific research and at universities, to redefine the boundaries of dynamic web architecture and AI-supported systems.
+
+By downloading, copying, modifying, or using this code (and the associated modules), you agree to the following binding license terms:
+
+## 1. Granted Rights (Use and Further Development)
+The code is hereby made available as "Open Source". Every user is permitted to freely use, study, and modify the source code, and to develop their own modules based upon it. The distribution of the original or modified code is explicitly encouraged under strict compliance with the following conditions.
+
+## 2. Prohibition of Commercial Use (No Sale Without Consent)
+This framework and all further developments based upon it are intended for free, non-commercial use by the general public.
+**A sale, commercial licensing, or any other form of direct monetization of the code, the modules, or the systems created from them is strictly prohibited.**
+Exceptions to this rule imperatively require the prior, explicit, and written consent of the Lead Architect, Emanuel Schaaf.
+
+## 3. Protection of System Integrity (Stability Clause)
+The highest priority in any further development is the preservation of system stability.
+Every developer who creates new modules, modifies the existing code, or distributes it, is obligated to ensure that these modifications do not damage or destroy the core architecture of the system. The system must remain functional, stable, and usable for the end user after every extension. Destructive modifications or the deliberate implementation of faulty code that endangers the basic architecture violate the ultimate goal of this project and this license.
+
+## 4. Attribution and Copyright (Open Origin Architecture)
+With every distribution of the code—whether in modified or unmodified form—this license file must remain fully attached and included.
+The name of the Lead Architect (**Emanuel Schaaf**) and the reference to the **Open Origin Architecture** must always remain visible in the headers of the source codes (module headers) as well as in any documentation, acknowledging the creator of the A.R.T.E. base system.
+
+## 5. Disclaimer of Liability
+The software and all modules are provided "as is" without any express or implied warranty. The author assumes no liability for damages, data loss, or other problems arising from the use, compilation, or modification of this system.
+
+---
+*Created by Emanuel Schaaf – Pirmasens, Rhineland-Palatinate.*
