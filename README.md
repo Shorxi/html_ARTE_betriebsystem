@@ -43,7 +43,7 @@ Isolierte, hochspezialisierte Werkzeuge, die nativ im OS-Container laufen.
 
 #### 3. 📄 Dokumentation & Lizenzen
 *   `Bedienungsanleitung_A.R.T.E._System_&_Module.md` / `User_Manual_A.R.T.E._System_&_Modules_en.pdf` – Detaillierte Systemanleitungen.
-*   `Lizenz.md` / `de_A.R.T.E._Open_Origin_Architektur-Lizenz_AOoL.md` / `en_A.R.T.E._Open_Origin_Architecture_License_AOOL.md` – A.R.T.E. Open Origin Architecture License (AOoL).
+*  [`Lizenz.md`](Lizenz.md) / `de_A.R.T.E._Open_Origin_Architektur-Lizenz_AOoL.md` /`en_A.R.T.E._Open_Origin_Architecture_License_AOOL.md` – A.R.T.E. Open Origin Architecture License (AOoL).
 
 ### Live Demo
 *   [`> Demo <`](https://arte.site.je/?i=1)
@@ -129,7 +129,7 @@ A.R.T.E. requires **no installation**.
 
 ### ⚖️ License & Legal (A.O.o.L.)
 
-This project is licensed under the **A.R.T.E. Open Origin Architecture License (AOoL)**.
+This project is licensed under the **A.R.T.E. Open Origin Architecture License (AOoL)**.[`Lizenz.md`](Lizenz.md)
 
 **The most important principles:**
 1.  **Open Source:** Everyone is allowed to use, study, and develop their own modules.
