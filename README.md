@@ -64,7 +64,7 @@ A.R.T.E. erfordert **keine Installation**.
 
 ### ⚖️ Lizenz & Rechtliches (A.O.o.L.)
 
-Dieses Projekt ist lizenziert unter der **A.R.T.E. Open Origin Architektur-Lizenz (AOoL)**. 
+Dieses Projekt ist lizenziert unter der **A.R.T.E. Open Origin Architektur-Lizenz (AOoL)**. [`Lizenz.md`](Lizenz.md)
 
 **Die wichtigsten Grundsätze:**
 1.  **Open Source:** Jeder darf den Code nutzen, studieren und eigene Module entwickeln.
@@ -108,7 +108,7 @@ Isolated, highly specialized tools that run natively within the OS container.
 
 #### 3. 📄 Documentation & Licenses
 *   `Bedienungsanleitung_A.R.T.E._System_&_Module.md` / `User_Manual_A.R.T.E._System_&_Modules_en.pdf` – Detailed user manuals.
-*   `Lizenz.md` / `de_A.R.T.E._Open_Origin_Architektur-Lizenz_AOoL.md` / `en_A.R.T.E._Open_Origin_Architecture_License_AOOL.md` – A.R.T.E. Open Origin Architecture License (AOoL).
+*   [`Lizenz.md`](Lizenz.md) / `de_A.R.T.E._Open_Origin_Architektur-Lizenz_AOoL.md` / `en_A.R.T.E._Open_Origin_Architecture_License_AOOL.md` – A.R.T.E. Open Origin Architecture License (AOoL).
 
 ### Live Demo
 *   [`> Demo <`](https://arte.site.je/?i=1)
