@@ -44,8 +44,8 @@ Isolierte, hochspezialisierte Werkzeuge, die nativ im OS-Container laufen.
 *   [`videoschnitt.html`](Module/videoschnitt.html) – Kinetic Video Engine
 
 #### 3. 📄 Dokumentation & Lizenzen
-*   `Bedienungsanleitung_A.R.T.E._System_&_Module.md` / `User_Manual_A.R.T.E._System_&_Modules_en.pdf` – Detaillierte Systemanleitungen.
-*  [`Lizenz.md`](Lizenz.md) / `de_A.R.T.E._Open_Origin_Architektur-Lizenz_AOoL.md` /`en_A.R.T.E._Open_Origin_Architecture_License_AOOL.md` – A.R.T.E. Open Origin Architecture License (AOoL).
+*  [`Bedienungsanleitung A.R.T.E. System & Module`](Bedienungsanleitung_A.R.T.E._System_&_Module_de.pdf) – Detaillierte Systemanleitungen.
+*  [`Lizenz.md`](Lizenz.md) / [`A.R.T.E. Open Origin Architektur-Lizenz AOoL`](de_A.R.T.E._Open_Origin_Architektur-Lizenz_AOoL.pdf) – A.R.T.E. Open Origin Architecture License (AOoL).
 
 ### Live Demo
 *   [`> Demo <`](https://arte.site.je/?i=1)
@@ -111,8 +111,8 @@ Isolated, highly specialized tools that run natively within the OS container.
 *   [`videoschnitt.html`](Module/videoschnitt.html) – Kinetic Video Engine
 
 #### 3. 📄 Documentation & Licenses
-*   `Bedienungsanleitung_A.R.T.E._System_&_Module.md` / `User_Manual_A.R.T.E._System_&_Modules_en.pdf` – Detailed user manuals.
-*   [`Lizenz.md`](Lizenz.md) / `de_A.R.T.E._Open_Origin_Architektur-Lizenz_AOoL.md` / `en_A.R.T.E._Open_Origin_Architecture_License_AOOL.md` – A.R.T.E. Open Origin Architecture License (AOoL).
+*   [`User Manual A.R.T.E. System & Modules`](User_Manual_A.R.T.E._System_&_Modules_en.pdf) – Detailed user manuals.
+*   [`Lizenz.md`](Lizenz.md) / [`A.R.T.E. Open Origin Architecture License AOOL`](en_A.R.T.E._Open_Origin_Architecture_License_AOOL.pdf) – A.R.T.E. Open Origin Architecture License (AOoL).
 
 ### Live Demo
 *   [`> Demo <`](https://arte.site.je/?i=1)
