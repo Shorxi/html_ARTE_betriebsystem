@@ -28,8 +28,10 @@ Die Architektur ist in übersichtliche Kernbereiche unterteilt:
 Das Herzstück der Matrix. Diese Datei lädt die Kern-Infrastruktur, das Window-Management (Shadow DOM) und das lokale Daten-Routing.
 *   [`ARTE_System_Core.html`](System/ARTE_System_Core.html) – Der primäre OS-Bootloader und die lokale Datenbank-Verwaltung.
 
-#### 2. 🧩 Die Module (`/Module`)
+#### 2. 🧩 Die Module 
 Isolierte, hochspezialisierte Werkzeuge, die nativ im OS-Container laufen.
+*   [`A.R.T.E.App-Panel.html`](Module/A.R.T.E.App-Panel.html)Mini Tools app Store 3 apps in /apps ARTE_Chronos_Matrix Uhr, ARTE_Currency_Core Währungs Umrechner, ARTE_Sci_Calc Wissenschafts Taschenrechner
+*   [`ARTE_Quantum_Canvas.html`](Module/ARTE_Quantum_Canvas.html) Professionelles Bildbearbeitungs tool 
 *   [`Audio_Analyser-Pipeline.html`](Module/Audio_Analyser-Pipeline.html) – Acoustic Resonance Engine
 *   [`Image_Resizer_Matrix.html`](Module/Image_Resizer_Matrix.html) – High Fidelity Scaler
 *   [`Kinetic_Telemetry_&_Canvas_Engine.html`](Module/Kinetic_Telemetry_&_Canvas_Engine.html) – Native GPU Datenvisualisierung
@@ -95,6 +97,8 @@ The heart of the matrix. This file loads the core infrastructure, window managem
 
 #### 2. 🧩 The Modules (`/Module`)
 Isolated, highly specialized tools that run natively within the OS container.
+*   [`A.R.T.E.App-Panel.html`](Module/A.R.T.E.App-Panel.html)Mini Tools App-Store 3 apps on /apps ARTE_Chronos_Matrix Clock, ARTE_Currency_Core Currency Converter, ARTE_Sci_Calc Scientific Calculator
+*   [`ARTE_Quantum_Canvas.html`](Module/ARTE_Quantum_Canvas.html) Professional image editing tool
 *   [`Audio_Analyser-Pipeline.html`](Module/Audio_Analyser-Pipeline.html) – Acoustic Resonance Engine
 *   [`Image_Resizer_Matrix.html`](Module/Image_Resizer_Matrix.html) – High Fidelity Scaler
 *   [`Kinetic_Telemetry_&_Canvas_Engine.html`](Module/Kinetic_Telemetry_&_Canvas_Engine.html) – Native GPU Data Visualization
