@@ -1,0 +1,281 @@
+<!--
+Lead Architect: Emanuel Schaaf / Google AI
+Open Origin Architecture
+Project: A.R.T.E. Micro-App - Scientific Calculator (Standalone, Sandbox Safe, Full i18n)
+Concept: Kinetic UI, Safe Eval Routing, Event Listeners
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>A.R.T.E. Sci-Calc Engine</title>
+    <style>
+        :root {
+            --arte-bg: #05070a;
+            --arte-bg2: #0d1117;
+            --arte-bg3: #161b22;
+            --arte-border: #30363d;
+            --arte-fg: #c9d1d9;
+            --arte-cyan: #00ffcc;
+            --arte-magenta: #ff00ff;
+            --arte-gold: #ffd700;
+            --arte-red: #ff7b72;
+            --arte-muted: #8b949e;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body, html {
+            height: 100%; width: 100%;
+            background-color: var(--arte-bg);
+            color: var(--arte-fg);
+            font-family: Consolas, "Courier New", monospace;
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            padding: 10px;
+        }
+
+        .app-container {
+            width: 100%; max-width: 500px; height: 100%; max-height: 700px;
+            background: var(--arte-bg2);
+            border: 1px solid var(--arte-border); border-radius: 8px;
+            display: flex; flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+        }
+
+        .header {
+            padding: 15px 20px; border-bottom: 1px solid var(--arte-border);
+            background: var(--arte-bg3);
+            display: flex; justify-content: space-between; align-items: center;
+            border-top-left-radius: 8px; border-top-right-radius: 8px; flex: 0 0 auto;
+        }
+
+        .header h3 {
+            color: var(--arte-cyan); font-size: 1.1rem;
+            text-transform: uppercase; letter-spacing: 2px; margin: 0;
+        }
+
+        .panel { padding: 25px; display: flex; flex-direction: column; gap: 18px; flex: 1; min-height: 0;}
+
+        .update-info-title {
+            text-align: left; border-bottom: 1px solid var(--arte-border);
+            padding-bottom: 5px; color: var(--arte-cyan);
+            text-transform: uppercase; font-weight: bold; font-size: 0.85rem;
+        }
+
+        .calc-display-wrapper {
+            background: #010409; border: 1px solid var(--arte-border); border-radius: 6px;
+            padding: 15px; position: relative; overflow: hidden;
+            display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end;
+            height: 110px; transition: box-shadow 0.2s, border-color 0.2s; flex: 0 0 auto;
+        }
+
+        .calc-display-wrapper::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%;
+            background: linear-gradient(rgba(0,255,204,0.05) 50%, transparent 50%);
+            background-size: 100% 4px; pointer-events: none; opacity: 0.5;
+        }
+
+        .calc-history {
+            color: var(--arte-muted); font-size: 0.9rem; min-height: 1.2em;
+            margin-bottom: 5px; word-break: break-all; text-align: right;
+        }
+
+        .calc-input {
+            color: var(--arte-cyan); font-size: 2.2rem; font-weight: bold;
+            word-break: break-all; text-shadow: 0 0 10px rgba(0, 255, 204, 0.3); text-align: right; width: 100%;
+        }
+
+        .calc-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; flex: 1; min-height: 0;
+        }
+
+        .calc-btn {
+            background: var(--arte-bg3); border: 1px solid var(--arte-border);
+            color: var(--arte-fg); border-radius: 4px; font-family: inherit; font-size: 1.1rem;
+            cursor: pointer; transition: all 0.1s; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; width: 100%; height: 100%;
+        }
+
+        .calc-btn:hover { background: var(--arte-border); transform: scale(0.96); }
+        .calc-btn:active { box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
+
+        .calc-btn.sci { color: var(--arte-gold); font-size: 0.9rem; }
+        .calc-btn.op { color: var(--arte-magenta); background: rgba(255, 0, 255, 0.05); border-color: rgba(255, 0, 255, 0.2); }
+        .calc-btn.action { color: var(--arte-red); }
+        .calc-btn.eq { background: var(--arte-cyan); color: var(--arte-bg); grid-column: span 2; }
+        .calc-btn.eq:hover { background: #00e6b8; }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <h3 data-mi18n="app_title">A.R.T.E. Sci-Calc Matrix</h3>
+    </div>
+
+    <div class="panel">
+        <div class="update-info-title">
+            <span style="color: var(--arte-fg);">[SYS.02]</span> <span data-mi18n="lbl_core">Sci-Calc Engine</span>
+        </div>
+
+        <div class="calc-display-wrapper" id="calc-wrapper">
+            <div class="calc-history" id="calc-history"></div>
+            <div class="calc-input" id="calc-input">0</div>
+        </div>
+
+        <div class="calc-grid">
+            <!-- Row 1 -->
+            <button class="calc-btn sci" data-action="sci" data-val="sin(">sin</button>
+            <button class="calc-btn sci" data-action="sci" data-val="cos(">cos</button>
+            <button class="calc-btn sci" data-action="sci" data-val="tan(">tan</button>
+            <button class="calc-btn action" id="btn-clear">AC</button>
+            <button class="calc-btn action" id="btn-del">DEL</button>
+            <!-- Row 2 -->
+            <button class="calc-btn sci" data-action="sci" data-val="sqrt(">√</button>
+            <button class="calc-btn sci" data-action="char" data-val="^">xʸ</button>
+            <button class="calc-btn sci" data-action="char" data-val="(">(</button>
+            <button class="calc-btn sci" data-action="char" data-val=")">)</button>
+            <button class="calc-btn op" data-action="char" data-val="/">÷</button>
+            <!-- Row 3 -->
+            <button class="calc-btn sci" data-action="sci" data-val="log(">log</button>
+            <button class="calc-btn" data-action="char" data-val="7">7</button>
+            <button class="calc-btn" data-action="char" data-val="8">8</button>
+            <button class="calc-btn" data-action="char" data-val="9">9</button>
+            <button class="calc-btn op" data-action="char" data-val="*">×</button>
+            <!-- Row 4 -->
+            <button class="calc-btn sci" data-action="sci" data-val="ln(">ln</button>
+            <button class="calc-btn" data-action="char" data-val="4">4</button>
+            <button class="calc-btn" data-action="char" data-val="5">5</button>
+            <button class="calc-btn" data-action="char" data-val="6">6</button>
+            <button class="calc-btn op" data-action="char" data-val="-">−</button>
+            <!-- Row 5 -->
+            <button class="calc-btn sci" data-action="char" data-val="π">π</button>
+            <button class="calc-btn" data-action="char" data-val="1">1</button>
+            <button class="calc-btn" data-action="char" data-val="2">2</button>
+            <button class="calc-btn" data-action="char" data-val="3">3</button>
+            <button class="calc-btn op" data-action="char" data-val="+">+</button>
+            <!-- Row 6 -->
+            <button class="calc-btn sci" data-action="char" data-val="e">e</button>
+            <button class="calc-btn" data-action="char" data-val="0">0</button>
+            <button class="calc-btn" data-action="char" data-val=".">.</button>
+            <button class="calc-btn eq" id="btn-calc">=</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    "use strict";
+
+    // --- SAFE STORAGE WRAPPER ---
+    function getSafeStorage(key, defVal) {
+        try { return window.localStorage.getItem(key) || defVal; } 
+        catch (e) { return defVal; }
+    }
+
+    // --- i18n Engine ---
+    const mod_i18n = {
+        lang: getSafeStorage('arte_lang_pref', 'de'),
+        dict: {
+            de: { app_title: "A.R.T.E. Sci-Calc Matrix", lbl_core: "Sci-Calc Engine", js_err: "SYNTAX FEHLER" },
+            en: { app_title: "A.R.T.E. Sci-Calc Matrix", lbl_core: "Sci-Calc Engine", js_err: "SYNTAX ERROR" }
+        },
+        t: function(key) { return this.dict[this.lang][key] || key; },
+        updateUI: function() {
+            document.querySelectorAll('[data-mi18n]').forEach(el => el.innerHTML = this.t(el.getAttribute('data-mi18n')));
+        }
+    };
+
+    if (window.osBus && typeof window.osBus.on === "function") {
+        window.osBus.on("lang-changed", function(lang) { mod_i18n.lang = lang; mod_i18n.updateUI(); });
+    }
+    mod_i18n.updateUI();
+
+    // --- Logic ---
+    const calcInput = document.getElementById("calc-input");
+    const calcHistory = document.getElementById("calc-history");
+    const calcWrapper = document.getElementById("calc-wrapper");
+    
+    let currentExpression = "";
+    let isEvaluated = false;
+
+    function updateCalcDisplay() {
+        calcInput.textContent = currentExpression === "" ? "0" : currentExpression;
+    }
+
+    function insertChar(char) {
+        if (isEvaluated) { currentExpression = ""; isEvaluated = false; }
+        currentExpression += char; updateCalcDisplay();
+    }
+
+    function insertSci(func) {
+        if (isEvaluated) { currentExpression = ""; isEvaluated = false; }
+        currentExpression += func; updateCalcDisplay();
+    }
+
+    function clearCalc() {
+        currentExpression = ""; calcHistory.textContent = ""; isEvaluated = false; updateCalcDisplay();
+    }
+
+    function deleteChar() {
+        if (isEvaluated) { clearCalc(); return; }
+        currentExpression = currentExpression.slice(0, -1); updateCalcDisplay();
+    }
+
+    function calculateResult() {
+        if (currentExpression === "") return;
+        
+        calcWrapper.style.borderColor = "var(--arte-cyan)";
+        calcWrapper.style.boxShadow = "0 0 15px rgba(0, 255, 204, 0.4)";
+        setTimeout(() => { calcWrapper.style.borderColor = "var(--arte-border)"; calcWrapper.style.boxShadow = "none"; }, 300);
+
+        try {
+            let parsedExpr = currentExpression
+                .replace(/×/g, '*').replace(/÷/g, '/')
+                .replace(/sin\(/g, 'Math.sin(').replace(/cos\(/g, 'Math.cos(').replace(/tan\(/g, 'Math.tan(')
+                .replace(/log\(/g, 'Math.log10(').replace(/ln\(/g, 'Math.log(').replace(/sqrt\(/g, 'Math.sqrt(')
+                .replace(/π/g, 'Math.PI').replace(/e/g, 'Math.E').replace(/\^/g, '**');
+
+            const openParens = (parsedExpr.match(/\(/g) || []).length;
+            const closeParens = (parsedExpr.match(/\)/g) || []).length;
+            for (let i = 0; i < openParens - closeParens; i++) {
+                parsedExpr += ")"; currentExpression += ")";
+            }
+
+            const result = Function('"use strict";return (' + parsedExpr + ')')();
+            if (!isFinite(result)) throw new Error("Math Error");
+
+            let finalResult = Math.round(result * 100000000) / 100000000;
+            
+            calcHistory.textContent = currentExpression + " =";
+            currentExpression = String(finalResult);
+            isEvaluated = true;
+            
+        } catch (error) {
+            calcHistory.textContent = mod_i18n.t("js_err");
+            currentExpression = "ERR"; isEvaluated = true;
+            calcInput.style.color = "var(--arte-red)";
+            setTimeout(() => { calcInput.style.color = "var(--arte-cyan)"; clearCalc(); }, 1500);
+        }
+        updateCalcDisplay();
+    }
+
+    // --- Sicheres Event-Binding ---
+    document.querySelectorAll('.calc-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const action = e.target.getAttribute('data-action');
+            const val = e.target.getAttribute('data-val');
+            
+            if (action === 'char') insertChar(val);
+            else if (action === 'sci') insertSci(val);
+        });
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', clearCalc);
+    document.getElementById('btn-del').addEventListener('click', deleteChar);
+    document.getElementById('btn-calc').addEventListener('click', calculateResult);
+
+</script>
+</body>
+</html>

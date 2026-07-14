@@ -1,0 +1,297 @@
+<!--
+Lead Architect: Emanuel Schaaf / Google AI
+Open Origin Architecture
+Project: A.R.T.E. Micro-App - Currency Core (Standalone, Offline-Fallback, Full i18n, Sandbox Safe)
+Concept: Kinetic UI, Open API Fetch, Safe Sandbox Routing
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>A.R.T.E. Currency Core</title>
+    <style>
+        :root {
+            --arte-bg: #05070a;
+            --arte-bg2: #0d1117;
+            --arte-bg3: #161b22;
+            --arte-border: #30363d;
+            --arte-fg: #c9d1d9;
+            --arte-cyan: #00ffcc;
+            --arte-magenta: #ff00ff;
+            --arte-gold: #ffd700;
+            --arte-red: #ff7b72;
+            --arte-muted: #8b949e;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body, html {
+            height: 100%; width: 100%;
+            background-color: var(--arte-bg);
+            color: var(--arte-fg);
+            font-family: Consolas, "Courier New", monospace;
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            padding: 10px;
+        }
+
+        .app-container {
+            width: 100%; max-width: 500px;
+            background: var(--arte-bg2);
+            border: 1px solid var(--arte-border); border-radius: 8px;
+            display: flex; flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+        }
+
+        .header {
+            padding: 15px 20px; border-bottom: 1px solid var(--arte-border);
+            background: var(--arte-bg3);
+            display: flex; justify-content: space-between; align-items: center;
+            border-top-left-radius: 8px; border-top-right-radius: 8px;
+        }
+
+        .header h3 {
+            color: var(--arte-cyan); font-size: 1.1rem;
+            text-transform: uppercase; letter-spacing: 2px; margin: 0;
+        }
+
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background-color: var(--arte-gold);
+            box-shadow: 0 0 8px var(--arte-gold);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+        .panel { padding: 25px; display: flex; flex-direction: column; gap: 18px; }
+
+        .update-info-title {
+            text-align: left; border-bottom: 1px solid var(--arte-border);
+            padding-bottom: 5px; color: var(--arte-magenta);
+            text-transform: uppercase; font-weight: bold; font-size: 0.85rem;
+        }
+
+        .input-matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-group label { color: var(--arte-magenta); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; }
+
+        input[type="number"], select {
+            background-color: #05070a; border: 1px solid var(--arte-border);
+            color: var(--arte-fg); padding: 12px; font-family: inherit;
+            font-size: 1rem; border-radius: 4px; outline: none; transition: 0.2s; width: 100%;
+        }
+        input[type="number"]:focus, select:focus { border-color: var(--arte-cyan); }
+        
+        select option {
+            background-color: var(--arte-bg2);
+            color: var(--arte-fg);
+            font-weight: bold;
+            padding: 5px;
+        }
+
+        .swap-container { display: flex; justify-content: center; align-items: center; grid-column: span 2; margin: -5px 0; }
+        
+        .btn-swap {
+            background: var(--arte-bg3); border: 1px solid var(--arte-cyan);
+            color: var(--arte-cyan); width: 36px; height: 36px; border-radius: 50%;
+            cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: 0.2s;
+        }
+        .btn-swap:hover { background: var(--arte-cyan); color: var(--arte-bg); transform: rotate(180deg); }
+
+        .result-display {
+            position: relative; height: 160px; display: flex; align-items: center; justify-content: center;
+            margin-top: 10px; overflow: hidden; border-radius: 6px; border: 1px solid var(--arte-border);
+            background: radial-gradient(circle at center, rgba(0, 255, 204, 0.05), #010409 70%);
+        }
+
+        .kinetic-ring {
+            position: absolute; width: 200px; height: 200px; border-radius: 50%;
+            border: 2px dashed var(--arte-cyan); animation: rotateRight 15s linear infinite; opacity: 0.3;
+        }
+        .kinetic-ring.inner {
+            width: 150px; height: 150px; border: 2px dotted var(--arte-magenta);
+            animation: rotateLeft 10s linear infinite; opacity: 0.4;
+        }
+
+        @keyframes rotateRight { 100% { transform: rotate(360deg); } }
+        @keyframes rotateLeft { 100% { transform: rotate(-360deg); } }
+
+        .result-value {
+            position: relative; z-index: 2; font-size: 2.5rem; font-weight: bold;
+            color: var(--arte-cyan); text-shadow: 0 0 15px rgba(0, 255, 204, 0.4); text-align: center;
+        }
+        .result-rate { position: absolute; bottom: 10px; right: 10px; font-size: 0.75rem; color: var(--arte-gold); z-index: 2; }
+        .update-info { text-align: center; font-size: 0.75rem; color: var(--arte-muted); margin-top: 5px;}
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <h3 data-mi18n="app_title">A.R.T.E. Currency Core</h3>
+        <div class="status-dot" id="api-status" data-mi18n-title="sync_title" title="Satelliten-Uplink aktiv"></div>
+    </div>
+
+    <div class="panel">
+        <div class="update-info-title">
+            <span style="color: var(--arte-fg);">[SYS.01]</span> <span data-mi18n="lbl_core">Live Currency Core</span>
+        </div>
+
+        <div class="input-matrix">
+            <div class="input-group" style="grid-column: span 2;">
+                <label data-mi18n="lbl_amount">Betrag (Amount)</label>
+                <input type="number" id="inp-amount" value="1.00" min="0" step="any">
+            </div>
+            <div class="input-group">
+                <label data-mi18n="lbl_from">Ursprung (From)</label>
+                <select id="sel-from"></select>
+            </div>
+            <div class="input-group">
+                <label data-mi18n="lbl_to">Ziel (To)</label>
+                <select id="sel-to"></select>
+            </div>
+            <div class="swap-container">
+                <button class="btn-swap" id="btn-swap" data-mi18n-title="btn_swap_title" title="Währungen tauschen">⇅</button>
+            </div>
+        </div>
+
+        <div class="result-display">
+            <div class="kinetic-ring"></div>
+            <div class="kinetic-ring inner"></div>
+            <div class="result-value" id="out-result">0.00</div>
+            <div class="result-rate" id="out-rate">1 = 1</div>
+        </div>
+        
+        <div class="update-info" id="out-date" data-mi18n="lbl_wait">Warte auf Matrix-Uplink...</div>
+    </div>
+</div>
+
+<script>
+    "use strict";
+
+    // --- SAFE STORAGE WRAPPER ---
+    function getSafeStorage(key, defVal) {
+        try { return window.localStorage.getItem(key) || defVal; } 
+        catch (e) { return defVal; }
+    }
+
+    // --- i18n Engine ---
+    const mod_i18n = {
+        lang: getSafeStorage('arte_lang_pref', 'de'),
+        dict: {
+            de: {
+                app_title: "A.R.T.E. Currency Core", sync_title: "Satelliten-Uplink aktiv",
+                lbl_core: "Live Currency Core", lbl_amount: "Betrag (Amount)", lbl_from: "Ursprung (From)", lbl_to: "Ziel (To)",
+                btn_swap_title: "Währungen tauschen", lbl_wait: "Warte auf Matrix-Uplink...",
+                js_err_conn: "Offline-Matrix aktiv (Sicherheits-Fallback).", js_update: "Letztes Markt-Update:"
+            },
+            en: {
+                app_title: "A.R.T.E. Currency Core", sync_title: "Satellite Uplink active",
+                lbl_core: "Live Currency Core", lbl_amount: "Amount", lbl_from: "Origin (From)", lbl_to: "Target (To)",
+                btn_swap_title: "Swap Currencies", lbl_wait: "Awaiting Matrix Uplink...",
+                js_err_conn: "Offline Matrix active (Security Fallback).", js_update: "Last Market Update:"
+            }
+        },
+        t: function(key) { return this.dict[this.lang][key] || key; },
+        updateUI: function() {
+            document.querySelectorAll('[data-mi18n]').forEach(el => el.innerHTML = this.t(el.getAttribute('data-mi18n')));
+            document.querySelectorAll('[data-mi18n-title]').forEach(el => el.title = this.t(el.getAttribute('data-mi18n-title')));
+        }
+    };
+
+    if (window.osBus && typeof window.osBus.on === "function") {
+        window.osBus.on("lang-changed", function(lang) { mod_i18n.lang = lang; mod_i18n.updateUI(); });
+    }
+    mod_i18n.updateUI();
+
+    // --- Logic & Fallback Matrix ---
+    const coreCurrencies = ["EUR", "USD", "GBP", "CHF", "JPY", "CNY", "CAD", "AUD", "RUB"];
+    const inpAmount = document.getElementById("inp-amount");
+    const selFrom = document.getElementById("sel-from");
+    const selTo = document.getElementById("sel-to");
+    const btnSwap = document.getElementById("btn-swap");
+    const outResult = document.getElementById("out-result");
+    const outRate = document.getElementById("out-rate");
+    const outDate = document.getElementById("out-date");
+    const apiStatus = document.getElementById("api-status");
+
+    let exchangeRates = {
+        "EUR": 1, "USD": 1.09, "GBP": 0.84, "CHF": 0.97, "JPY": 161.50,
+        "CNY": 7.92, "CAD": 1.49, "AUD": 1.63, "RUB": 96.50
+    };
+
+    function populateSelects(rates) {
+        const currentFrom = selFrom.value || "EUR";
+        const currentTo = selTo.value || "USD";
+        
+        selFrom.innerHTML = ""; selTo.innerHTML = "";
+        const allCurrencies = Object.keys(rates);
+        const sortedCurrencies = [...coreCurrencies.filter(c => allCurrencies.includes(c)), ...allCurrencies.filter(c => !coreCurrencies.includes(c))];
+
+        sortedCurrencies.forEach(currency => {
+            selFrom.add(new Option(currency, currency));
+            selTo.add(new Option(currency, currency));
+        });
+        
+        selFrom.value = currentFrom; 
+        selTo.value = currentTo;
+    }
+
+    function calculateCurrency() {
+        if (!exchangeRates || Object.keys(exchangeRates).length === 0) return;
+        const amount = parseFloat(inpAmount.value) || 0;
+        const rateFrom = exchangeRates[selFrom.value];
+        const rateTo = exchangeRates[selTo.value];
+
+        if (rateFrom && rateTo) {
+            const result = (amount / rateFrom) * rateTo;
+            const singleRate = (1 / rateFrom) * rateTo;
+
+            outResult.style.opacity = 0.5;
+            setTimeout(() => {
+                outResult.textContent = result.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + selTo.value;
+                outRate.textContent = `1 ${selFrom.value} = ${singleRate.toFixed(4)} ${selTo.value}`;
+                outResult.style.opacity = 1;
+            }, 100);
+        }
+    }
+
+    async function fetchRates() {
+        populateSelects(exchangeRates);
+        calculateCurrency();
+
+        try {
+            const response = await fetch("https://open.er-api.com/v6/latest/EUR");
+            const data = await response.json();
+
+            if (data.result === "success") {
+                exchangeRates = data.rates;
+                populateSelects(exchangeRates);
+                
+                apiStatus.style.backgroundColor = "var(--arte-cyan)";
+                apiStatus.style.boxShadow = "0 0 8px var(--arte-cyan)";
+                outDate.textContent = `${mod_i18n.t("js_update")} ${new Date(data.time_last_update_unix * 1000).toLocaleString()}`;
+                
+                calculateCurrency();
+            } else { throw new Error("API Error"); }
+        } catch (error) {
+            apiStatus.style.backgroundColor = "var(--arte-red)";
+            apiStatus.style.boxShadow = "0 0 8px var(--arte-red)";
+            outDate.textContent = mod_i18n.t("js_err_conn");
+        }
+    }
+
+    inpAmount.addEventListener("input", calculateCurrency);
+    selFrom.addEventListener("change", calculateCurrency);
+    selTo.addEventListener("change", calculateCurrency);
+    btnSwap.addEventListener("click", () => {
+        const temp = selFrom.value; selFrom.value = selTo.value; selTo.value = temp;
+        calculateCurrency();
+    });
+
+    fetchRates();
+</script>
+</body>
+</html>

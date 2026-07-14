@@ -1,0 +1,853 @@
+<!--
+Lead Architect: Emanuel Schaaf / Google AI
+Open Origin Architecture
+Project: A.R.T.E. Micro-App - Chronos Matrix (Spherical Time Engine, Sandbox-Safe, Full i18n)
+Concept: Kinetic UI, Hardware Canvas Rendering, Global Sync, Safe Storage
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>A.R.T.E. Chronos Matrix</title>
+    <style>
+        :host, :root {
+            --arte-bg: #05070a;
+            --arte-bg2: #0d1117;
+            --arte-bg3: #161b22;
+            --arte-border: #30363d;
+            --arte-fg: #c9d1d9;
+            --arte-cyan: #00ffcc;
+            --arte-magenta: #ff00ff;
+            --arte-gold: #ffd700;
+            --arte-red: #ff7b72;
+            --arte-green: #2ea043;
+            --arte-muted: #8b949e;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: var(--arte-bg);
+            color: var(--arte-fg);
+            font-family: Consolas, "Courier New", monospace;
+            overflow: hidden; 
+        }
+
+        /* Eigene, saubere Scrollbars für die App */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--arte-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--arte-border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--arte-muted); }
+
+        .app-container {
+            width: 100%;
+            height: 100%;
+            background: var(--arte-bg2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--arte-border);
+            background: var(--arte-bg3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex: 0 0 auto;
+        }
+
+        .header h3 {
+            color: var(--arte-cyan);
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--arte-green);
+            box-shadow: 0 0 8px var(--arte-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        /* Fluid Flexbox Layout */
+        .workspace-split {
+            display: flex;
+            flex-direction: row;
+            flex: 1;
+            min-height: 0; 
+            background: transparent;
+        }
+
+        .panel-controls {
+            flex: 0 0 320px;
+            background: var(--arte-bg2);
+            padding: 20px;
+            border-right: 1px solid var(--arte-border);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .panel-render {
+            flex: 1;
+            min-width: 0; /* Zwingend für I-Frame Ausrichtung */
+            background: #010409;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (max-width: 850px) {
+            .workspace-split { flex-direction: column; }
+            .panel-controls { flex: 0 0 auto; max-height: 45vh; border-right: none; border-bottom: 1px solid var(--arte-border); }
+            .panel-render { padding: 10px; }
+        }
+
+        /* =========================================
+           SEKTOR 1: KONTROLL-MATRIX (Links)
+           ========================================= */
+        .section-title {
+            text-align: left;
+            border-bottom: 1px solid var(--arte-border);
+            padding-bottom: 5px;
+            color: var(--arte-magenta);
+            text-transform: uppercase;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        
+        .section-title span { color: var(--arte-fg); }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            color: var(--arte-gold);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        select, input[type="text"] {
+            background-color: #05070a;
+            border: 1px solid var(--arte-border);
+            color: var(--arte-fg);
+            padding: 10px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            border-radius: 4px;
+            outline: none;
+            transition: border-color 0.2s;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        select:focus { border-color: var(--arte-cyan); }
+
+        .toggle-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .btn-toggle {
+            flex: 1;
+            background: #05070a;
+            border: 1px solid var(--arte-border);
+            color: var(--arte-muted);
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .btn-toggle.active {
+            background: rgba(0, 255, 204, 0.1);
+            border-color: var(--arte-cyan);
+            color: var(--arte-cyan);
+        }
+
+        .btn-save {
+            background: transparent;
+            border: 1px solid var(--arte-cyan);
+            color: var(--arte-cyan);
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            margin-top: auto;
+        }
+
+        .btn-save:hover {
+            background: rgba(0, 255, 204, 0.1);
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+        }
+
+        /* =========================================
+           SEKTOR 2: CHRONOS RENDERER (Rechts)
+           ========================================= */
+        .render-viewport {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            background: #010409;
+            border: 1px solid var(--arte-border);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+        }
+
+        canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+        }
+
+        .digital-overlay {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .time-digital {
+            font-size: clamp(2.5rem, 6vw, 5.5rem);
+            font-weight: bold;
+            color: var(--arte-cyan);
+            text-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+            line-height: 1;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            display: none; 
+            text-align: center;
+        }
+
+        .time-suffix {
+            font-size: 0.4em;
+            color: var(--arte-magenta);
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .date-display {
+            font-size: clamp(0.9rem, 2vw, 1.4rem);
+            color: var(--arte-gold);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            background: rgba(13, 17, 23, 0.7);
+            padding: 10px 25px;
+            border: 1px solid var(--arte-border);
+            border-radius: 4px;
+            backdrop-filter: blur(4px);
+            text-align: center;
+        }
+
+        .zone-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-size: 0.75rem;
+            color: var(--arte-magenta);
+            background: rgba(0,0,0,0.5);
+            padding: 5px 12px;
+            border: 1px solid var(--arte-magenta);
+            border-radius: 20px;
+            z-index: 2;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <h3 data-mi18n="app_title">A.R.T.E. Chronos Matrix</h3>
+        <div class="status-dot" id="sync-status" data-mi18n-title="sync_title" title="Sync aktiv"></div>
+    </div>
+
+    <div class="workspace-split">
+        <!-- KONTROLL-PANEL -->
+        <div class="panel-controls">
+            <div class="section-title" data-mi18n="cfg_vis"><span style="color: var(--arte-fg);">[CFG.01]</span> Visuelle Parameter</div>
+            
+            <div class="input-group">
+                <label data-mi18n="lbl_design">Design Matrix</label>
+                <select id="cfg-design">
+                    <option value="analog-sphere" data-mi18n="opt_sphere">Sphärische Orbit (Analog)</option>
+                    <option value="analog-radar" data-mi18n="opt_radar">Radar Sweep (Analog)</option>
+                    <option value="digital-cyber" data-mi18n="opt_cyber">Cyber Core (Digital)</option>
+                    <option value="digital-neon" data-mi18n="opt_neon">Neon Pulse (Digital)</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label data-mi18n="lbl_tz">Netzwerk-Zone (Sync)</label>
+                <select id="cfg-timezone">
+                    <option value="local" data-mi18n="opt_local">Lokale Systemzeit</option>
+                    <option value="Europe/Berlin" data-mi18n="opt_eu_ber">Europa - Berlin / Brüssel</option>
+                    <option value="Europe/London" data-mi18n="opt_eu_lon">Europa - London (GMT)</option>
+                    <option value="America/New_York" data-mi18n="opt_us_ny">USA - New York (EST)</option>
+                    <option value="Asia/Tokyo" data-mi18n="opt_as_tok">Asien - Tokio (JST)</option>
+                    <option value="UTC" data-mi18n="opt_utc">Universal Time (UTC)</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label data-mi18n="lbl_timefmt">Zeitformat</label>
+                <div class="toggle-row">
+                    <button class="btn-toggle active" id="btn-24h" data-mi18n="btn_24h">24 Std</button>
+                    <button class="btn-toggle" id="btn-12h" data-mi18n="btn_12h">12 Std (AM/PM)</button>
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top: 15px;" data-mi18n="cfg_data"><span style="color: var(--arte-fg);">[CFG.02]</span> Daten-Syntax</div>
+
+            <div class="input-group">
+                <label data-mi18n="lbl_date">Datums-Struktur</label>
+                <select id="cfg-date-order">
+                    <option value="DD-MM-YYYY" data-mi18n="opt_dmy">Tag - Monat - Jahr</option>
+                    <option value="MM-DD-YYYY" data-mi18n="opt_mdy">Monat - Tag - Jahr</option>
+                    <option value="YYYY-MM-DD" data-mi18n="opt_ymd">Jahr - Monat - Tag</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label data-mi18n="lbl_month">Monats-Formatierung</label>
+                <select id="cfg-month-format">
+                    <option value="long" data-mi18n="opt_long">Ausgeschrieben (Januar)</option>
+                    <option value="short" data-mi18n="opt_short">Kurz (Jan)</option>
+                    <option value="numeric" data-mi18n="opt_num">Numerisch (01)</option>
+                </select>
+            </div>
+
+            <!-- NEU: Manuelles Speichern (verhindert I-Frame Caching Bugs) -->
+            <button class="btn-save" id="btn-save-cfg" style="margin-top: 25px;" data-mi18n="btn_save">💾 Einstellungen Speichern</button>
+        </div>
+
+        <!-- RENDER-PANEL -->
+        <div class="panel-render">
+            <div class="render-viewport" id="viewport">
+                <div class="zone-badge" id="hud-zone">LOCAL TIME</div>
+                
+                <canvas id="clock-canvas"></canvas>
+                
+                <div class="digital-overlay">
+                    <div class="time-digital" id="hud-time">00:00:00</div>
+                    <div class="date-display" id="hud-date">01 JAN 2026</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    "use strict";
+
+    const root = typeof shadowRoot !== "undefined" ? shadowRoot : document;
+
+    // ==========================================
+    // 1. SAFE STORAGE (Sichert gegen IFrame-Crash)
+    // ==========================================
+    const DB_KEY = "arte_chronos_cfg";
+    
+    // Holt Daten sicher ab, stürzt nicht ab, wenn der Browser im I-Frame blockiert
+    function getSafeStorage(key, defVal) {
+        try { return window.localStorage.getItem(key) || defVal; } 
+        catch (e) { return defVal; }
+    }
+
+    // Speichert sicher ab
+    function setSafeStorage(key, val) {
+        try { window.localStorage.setItem(key, val); } 
+        catch (e) { console.warn("A.R.T.E. Sandbox: Speicherung blockiert, halte Daten lokal im RAM."); }
+    }
+
+
+    // ==========================================
+    // 2. STATISCHE & SICHERE i18n ÜBERSETZUNGS-ENGINE
+    // ==========================================
+    const mod_i18n = {
+        lang: getSafeStorage('arte_lang_pref', 'de'),
+        dict: {
+            de: {
+                app_title: "A.R.T.E. Chronos Matrix",
+                sync_title: "Sync aktiv",
+                cfg_vis: "<span style='color: var(--arte-fg);'>[CFG.01]</span> Visuelle Parameter",
+                lbl_design: "Design Matrix",
+                opt_sphere: "Sphärische Orbit (Analog)",
+                opt_radar: "Radar Sweep (Analog)",
+                opt_cyber: "Cyber Core (Digital)",
+                opt_neon: "Neon Pulse (Digital)",
+                lbl_tz: "Netzwerk-Zone (Sync)",
+                opt_local: "Lokale Systemzeit",
+                opt_eu_ber: "Europa - Berlin / Brüssel",
+                opt_eu_lon: "Europa - London (GMT)",
+                opt_us_ny: "USA - New York (EST)",
+                opt_as_tok: "Asien - Tokio (JST)",
+                opt_utc: "Universal Time (UTC)",
+                lbl_timefmt: "Zeitformat",
+                btn_24h: "24 Std",
+                btn_12h: "12 Std (AM/PM)",
+                cfg_data: "<span style='color: var(--arte-fg);'>[CFG.02]</span> Daten-Syntax",
+                lbl_date: "Datums-Struktur",
+                opt_dmy: "Tag - Monat - Jahr",
+                opt_mdy: "Monat - Tag - Jahr",
+                opt_ymd: "Jahr - Monat - Tag",
+                lbl_month: "Monats-Formatierung",
+                opt_long: "Ausgeschrieben (Januar)",
+                opt_short: "Kurz (Jan)",
+                opt_num: "Numerisch (01)",
+                btn_save: "💾 Einstellungen Speichern",
+                btn_saved: "Gespeichert!",
+                js_local: "LOKALE ZEIT"
+            },
+            en: {
+                app_title: "A.R.T.E. Chronos Matrix",
+                sync_title: "Sync active",
+                cfg_vis: "<span style='color: var(--arte-fg);'>[CFG.01]</span> Visual Parameters",
+                lbl_design: "Design Matrix",
+                opt_sphere: "Spherical Orbit (Analog)",
+                opt_radar: "Radar Sweep (Analog)",
+                opt_cyber: "Cyber Core (Digital)",
+                opt_neon: "Neon Pulse (Digital)",
+                lbl_tz: "Network Zone (Sync)",
+                opt_local: "Local System Time",
+                opt_eu_ber: "Europe - Berlin / Brussels",
+                opt_eu_lon: "Europe - London (GMT)",
+                opt_us_ny: "USA - New York (EST)",
+                opt_as_tok: "Asia - Tokyo (JST)",
+                opt_utc: "Universal Time (UTC)",
+                lbl_timefmt: "Time Format",
+                btn_24h: "24 Hr",
+                btn_12h: "12 Hr (AM/PM)",
+                cfg_data: "<span style='color: var(--arte-fg);'>[CFG.02]</span> Data Syntax",
+                lbl_date: "Date Structure",
+                opt_dmy: "Day - Month - Year",
+                opt_mdy: "Month - Day - Year",
+                opt_ymd: "Year - Month - Day",
+                lbl_month: "Month Formatting",
+                opt_long: "Full (January)",
+                opt_short: "Short (Jan)",
+                opt_num: "Numeric (01)",
+                btn_save: "💾 Save Settings",
+                btn_saved: "Saved!",
+                js_local: "LOCAL TIME"
+            }
+        },
+        t: function(key) { return this.dict[this.lang][key] || key; },
+        updateUI: function() {
+            root.querySelectorAll('[data-mi18n]').forEach(el => {
+                el.innerHTML = this.t(el.getAttribute('data-mi18n'));
+            });
+            root.querySelectorAll('[data-mi18n-title]').forEach(el => {
+                el.title = this.t(el.getAttribute('data-mi18n-title'));
+            });
+            if (cfgTimezone.value === 'local') {
+                hudZone.textContent = this.t('js_local');
+            }
+        }
+    };
+
+    if (window.osBus && typeof window.osBus.on === "function") {
+        window.osBus.on("lang-changed", function(lang) {
+            mod_i18n.lang = lang;
+            mod_i18n.updateUI();
+        });
+    }
+
+    // ==========================================
+    // 3. UI ELEMENTE & PERSISTENZ
+    // ==========================================
+    const canvas = root.getElementById("clock-canvas");
+    const ctx = canvas.getContext("2d");
+    const viewport = root.getElementById("viewport");
+    
+    const cfgDesign = root.getElementById("cfg-design");
+    const cfgTimezone = root.getElementById("cfg-timezone");
+    const btn24h = root.getElementById("btn-24h");
+    const btn12h = root.getElementById("btn-12h");
+    const cfgDateOrder = root.getElementById("cfg-date-order");
+    const cfgMonthFormat = root.getElementById("cfg-month-format");
+    const btnSaveCfg = root.getElementById("btn-save-cfg");
+
+    const hudTime = root.getElementById("hud-time");
+    const hudDate = root.getElementById("hud-date");
+    const hudZone = root.getElementById("hud-zone");
+
+    let use24h = true;
+
+    const DEFAULTS = {
+        design: "analog-sphere",
+        timezone: "local",
+        use24h: true,
+        dateOrder: "DD-MM-YYYY",
+        monthFormat: "long"
+    };
+
+    function loadSettings() {
+        try {
+            const savedStr = getSafeStorage(DB_KEY, null);
+            const saved = savedStr ? JSON.parse(savedStr) : DEFAULTS;
+            
+            cfgDesign.value = saved.design || DEFAULTS.design;
+            cfgTimezone.value = saved.timezone || DEFAULTS.timezone;
+            cfgDateOrder.value = saved.dateOrder || DEFAULTS.dateOrder;
+            cfgMonthFormat.value = saved.monthFormat || DEFAULTS.monthFormat;
+            
+            use24h = saved.use24h !== undefined ? saved.use24h : DEFAULTS.use24h;
+            if (use24h) {
+                btn24h.classList.add('active'); btn12h.classList.remove('active');
+            } else {
+                btn12h.classList.add('active'); btn24h.classList.remove('active');
+            }
+        } catch(e) {
+            console.warn("ARTE Chronos: Fehler beim Laden der Einstellungen", e);
+        }
+    }
+
+    function saveSettings() {
+        const config = {
+            design: cfgDesign.value,
+            timezone: cfgTimezone.value,
+            use24h: use24h,
+            dateOrder: cfgDateOrder.value,
+            monthFormat: cfgMonthFormat.value
+        };
+        setSafeStorage(DB_KEY, JSON.stringify(config));
+    }
+
+    // Sofortige UI Reaktion (aber Speicherung per Button als Backup)
+    cfgDesign.addEventListener('change', () => { /* Render Loop erfasst es sofort */ });
+    
+    btn24h.addEventListener('click', () => { 
+        use24h = true; btn24h.classList.add('active'); btn12h.classList.remove('active'); 
+    });
+    btn12h.addEventListener('click', () => { 
+        use24h = false; btn12h.classList.add('active'); btn24h.classList.remove('active'); 
+    });
+
+    // Manuelles Speichern mit visuellem Feedback
+    btnSaveCfg.addEventListener('click', () => {
+        saveSettings();
+        const origText = btnSaveCfg.innerHTML;
+        btnSaveCfg.innerHTML = "✔️ " + mod_i18n.t("btn_saved");
+        btnSaveCfg.style.borderColor = "var(--arte-green)";
+        btnSaveCfg.style.color = "var(--arte-green)";
+        
+        setTimeout(() => {
+            btnSaveCfg.innerHTML = origText;
+            btnSaveCfg.style.borderColor = "var(--arte-cyan)";
+            btnSaveCfg.style.color = "var(--arte-cyan)";
+        }, 1500);
+    });
+
+    // ==========================================
+    // 4. ENGINE LOGIK (Datum, Zeit, Render)
+    // ==========================================
+
+    function resizeCanvas() {
+        if(!viewport || !canvas) return;
+        const rect = viewport.getBoundingClientRect();
+        // Floor verhindert zitterndes Sub-Pixel Rendering
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+    }
+    
+    // Führe Resize durch, wenn das Element die Größe ändert
+    new ResizeObserver(resizeCanvas).observe(viewport);
+    window.addEventListener('resize', resizeCanvas);
+
+    function getTimeData() {
+        const now = new Date();
+        const ms = now.getMilliseconds();
+        let targetDate = now;
+        let tzName = mod_i18n.t("js_local");
+
+        if (cfgTimezone.value !== "local") {
+            try {
+                const tzString = now.toLocaleString("en-US", { timeZone: cfgTimezone.value });
+                targetDate = new Date(tzString);
+                tzName = cfgTimezone.options[cfgTimezone.selectedIndex].text.toUpperCase();
+            } catch(e) {
+                // Fallback, falls die Zeitzone vom System nicht unterstützt wird
+                tzName = "TIMEZONE ERROR";
+            }
+        }
+
+        hudZone.textContent = tzName;
+
+        return {
+            h: targetDate.getHours(),
+            m: targetDate.getMinutes(),
+            s: targetDate.getSeconds(),
+            ms: ms,
+            dateObj: targetDate
+        };
+    }
+
+    function updateDateDisplay(dateObj) {
+        const order = cfgDateOrder.value;
+        const mFormat = cfgMonthFormat.value;
+
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const year = dateObj.getFullYear();
+        let month = "";
+
+        if (mFormat === "numeric") {
+            month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        } else {
+            const localeCode = mod_i18n.lang === 'en' ? 'en-US' : 'de-DE';
+            month = dateObj.toLocaleString(localeCode, { month: mFormat });
+        }
+
+        let dateStr = "";
+        if (order === "DD-MM-YYYY") dateStr = `${day}. ${month} ${year}`;
+        if (order === "MM-DD-YYYY") dateStr = `${month} ${day}, ${year}`;
+        if (order === "YYYY-MM-DD") dateStr = `${year} / ${month} / ${day}`;
+
+        hudDate.textContent = dateStr.toUpperCase();
+    }
+
+    function formatDigitalTime(h, m, s) {
+        let suffix = "";
+        let displayH = h;
+        
+        if (!use24h) {
+            suffix = h >= 12 ? " PM" : " AM";
+            displayH = h % 12 || 12;
+        }
+
+        const hh = String(displayH).padStart(2, '0');
+        const mm = String(m).padStart(2, '0');
+        const ss = String(s).padStart(2, '0');
+
+        if(suffix) {
+            return `${hh}:${mm}:${ss} <span class="time-suffix">${suffix}</span>`;
+        }
+        return `${hh}:${mm}:${ss}`;
+    }
+
+    // ==========================================
+    // 5. RENDER SCHLEIFE (Absturzsicher)
+    // ==========================================
+    function renderLoop() {
+        const w = canvas.width;
+        const h = canvas.height;
+
+        // Warte bis das Layout geladen ist, bevor gerendert wird
+        if (w === 0 || h === 0) {
+            requestAnimationFrame(renderLoop);
+            return;
+        }
+
+        const cx = w / 2;
+        const cy = h / 2;
+        // Dynamischer Radius, abhängig von der Viewport-Größe
+        const radius = Math.min(w, h) * 0.35;
+
+        ctx.clearRect(0, 0, w, h);
+
+        const t = getTimeData();
+        updateDateDisplay(t.dateObj);
+
+        const design = cfgDesign.value;
+
+        // UI Weiche für Digital vs Analog
+        if (design.startsWith('digital')) {
+            hudTime.style.display = "block";
+            hudTime.innerHTML = formatDigitalTime(t.h, t.m, t.s);
+            
+            if(design === 'digital-neon') {
+                hudTime.style.color = "var(--arte-magenta)";
+                hudTime.style.textShadow = `0 0 ${10 + Math.sin(Date.now()*0.005)*10}px var(--arte-magenta)`;
+            } else {
+                hudTime.style.color = "var(--arte-cyan)";
+                hudTime.style.textShadow = "0 0 20px rgba(0, 255, 204, 0.5)";
+            }
+        } else {
+            hudTime.style.display = "none";
+        }
+
+        // --- DESIGN: Sphärische Orbit (Analog) ---
+        if (design === "analog-sphere") {
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(48, 54, 61, 0.5)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius * 1.15, 0, Math.PI * 2);
+            ctx.setLineDash([5, 15]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            for(let i=0; i<60; i++) {
+                const angle = (i * Math.PI / 30) - Math.PI / 2;
+                const isHour = i % 5 === 0;
+                const inner = isHour ? radius * 0.85 : radius * 0.95;
+                ctx.beginPath();
+                ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+                ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+                ctx.strokeStyle = isHour ? "var(--arte-cyan)" : "var(--arte-border)";
+                ctx.lineWidth = isHour ? 3 : 1;
+                ctx.stroke();
+            }
+
+            const secAngle = ((t.s + t.ms/1000) * Math.PI / 30) - Math.PI / 2;
+            const minAngle = ((t.m + t.s/60) * Math.PI / 30) - Math.PI / 2;
+            const hrAngle = (((t.h % 12) + t.m/60) * Math.PI / 6) - Math.PI / 2;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(hrAngle) * (radius * 0.5), cy + Math.sin(hrAngle) * (radius * 0.5));
+            ctx.strokeStyle = "var(--arte-magenta)";
+            ctx.lineWidth = 6;
+            ctx.lineCap = "round";
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "var(--arte-magenta)";
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(minAngle) * (radius * 0.75), cy + Math.sin(minAngle) * (radius * 0.75));
+            ctx.strokeStyle = "var(--arte-cyan)";
+            ctx.lineWidth = 4;
+            ctx.shadowColor = "var(--arte-cyan)";
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(cx - Math.cos(secAngle) * 20, cy - Math.sin(secAngle) * 20); 
+            ctx.lineTo(cx + Math.cos(secAngle) * (radius * 0.9), cy + Math.sin(secAngle) * (radius * 0.9));
+            ctx.strokeStyle = "var(--arte-gold)";
+            ctx.lineWidth = 2;
+            ctx.shadowColor = "var(--arte-gold)";
+            ctx.stroke();
+            ctx.shadowBlur = 0; 
+            
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            ctx.fillStyle = "var(--arte-bg)";
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // --- DESIGN: Radar Sweep (Analog) ---
+        else if (design === "analog-radar") {
+            const secAngle = ((t.s + t.ms/1000) * Math.PI / 30) - Math.PI / 2;
+            const minAngle = ((t.m + t.s/60) * Math.PI / 30) - Math.PI / 2;
+            
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(0, 255, 204, 0.05)";
+            ctx.fill();
+            ctx.strokeStyle = "var(--arte-cyan)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy);
+            ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius);
+            ctx.strokeStyle = "rgba(0, 255, 204, 0.2)";
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radius, secAngle - 0.5, secAngle);
+            ctx.closePath();
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+            grad.addColorStop(0, "rgba(0, 255, 204, 0)");
+            grad.addColorStop(1, "rgba(0, 255, 204, 0.4)");
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(secAngle) * radius, cy + Math.sin(secAngle) * radius);
+            ctx.strokeStyle = "var(--arte-cyan)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            const hrAngle = (((t.h % 12) + t.m/60) * Math.PI / 6) - Math.PI / 2;
+            
+            ctx.beginPath();
+            ctx.arc(cx + Math.cos(hrAngle) * (radius * 0.5), cy + Math.sin(hrAngle) * (radius * 0.5), 6, 0, Math.PI*2);
+            ctx.fillStyle = "var(--arte-magenta)";
+            ctx.fill();
+            ctx.shadowBlur = 10; ctx.shadowColor = "var(--arte-magenta)";
+
+            ctx.beginPath();
+            ctx.arc(cx + Math.cos(minAngle) * (radius * 0.75), cy + Math.sin(minAngle) * (radius * 0.75), 4, 0, Math.PI*2);
+            ctx.fillStyle = "var(--arte-gold)";
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        // --- DESIGN: Digital Matrix (Background Effects) ---
+        else if (design.startsWith('digital')) {
+            const timeVal = Date.now() * 0.001;
+            ctx.strokeStyle = "rgba(48, 54, 61, 0.3)";
+            ctx.lineWidth = 1;
+            
+            for(let i=0; i<10; i++) {
+                ctx.beginPath();
+                const r = radius * 0.2 + (i * 15);
+                ctx.arc(cx, cy, r, timeVal * (i%2==0?1:-1), timeVal * (i%2==0?1:-1) + Math.PI);
+                ctx.stroke();
+            }
+        }
+
+        requestAnimationFrame(renderLoop);
+    }
+
+    // --- Start-Sequenz ---
+    // Startet isoliert und sicher, auch wenn der I-Frame noch am Laden ist
+    window.onload = () => {
+        mod_i18n.updateUI();
+        loadSettings(); 
+        resizeCanvas();
+        renderLoop();
+    };
+
+</script>
+</body>
+</html>
