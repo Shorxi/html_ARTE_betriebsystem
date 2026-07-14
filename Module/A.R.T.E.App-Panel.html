@@ -1,0 +1,652 @@
+<!--
+Lead Architect: Emanuel Schaaf / Google AI
+Open Origin Architecture
+Project: A.R.T.E. Simple App Store (Dynamic Tabs, Terminal Node, I-Frame Auto-Heal Fix)
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>A.R.T.E. Simple App Store</title>
+    <style>
+        :host, :root {
+            --arte-bg: #05070a;
+            --arte-bg2: #0d1117;
+            --arte-bg3: #161b22;
+            --arte-border: #30363d;
+            --arte-fg: #c9d1d9;
+            --arte-muted: #8b949e;
+            --arte-cyan: #00ffcc;
+            --arte-gold: #ffd700;
+            --arte-red: #ff7b72;
+            --arte-green: #2ea043;
+            --arte-magenta: #ff00ff;
+        }
+
+        * { box-sizing: border-box; }
+        
+        .arte-store-shell {
+            height: 100%;
+            min-height: 720px;
+            background: var(--arte-bg);
+            color: var(--arte-fg);
+            font-family: Consolas, "Courier New", monospace;
+            display: grid;
+            grid-template-rows: auto auto 1fr auto;
+            overflow: hidden;
+            border: 1px solid var(--arte-border);
+        }
+
+        .arte-store-header {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; padding: 14px 18px; background: #05070a; border-bottom: 1px solid var(--arte-border);
+        }
+        .arte-store-title { color: var(--arte-fg); font-size: 0.84rem; letter-spacing: 0.5px; text-transform: uppercase; }
+        .arte-store-title strong { color: var(--arte-cyan); }
+        .arte-store-kernel { color: var(--arte-gold); font-size: 0.78rem; font-weight: 900; text-align: right; line-height: 1.15; }
+
+        /* --- TABS --- */
+        .arte-store-tabs {
+            display: flex; gap: 6px; padding: 7px 10px 0; background: #111820; border-bottom: 1px solid var(--arte-border);
+            overflow-x: auto;
+        }
+        .arte-store-tabs::-webkit-scrollbar { height: 4px; }
+        .arte-store-tabs::-webkit-scrollbar-thumb { background: var(--arte-border); }
+
+        .arte-store-tab {
+            padding: 10px 18px; border: 1px solid var(--arte-border); border-bottom: none;
+            background: #0d1117; color: var(--arte-muted);
+            border-top-left-radius: 5px; border-top-right-radius: 5px;
+            font-size: 0.78rem; font-weight: 800; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; white-space: nowrap; transition: 0.2s;
+        }
+        .arte-store-tab:hover { background: #161b22; color: var(--arte-fg); }
+        .arte-store-tab.active { color: var(--arte-cyan); border-top: 2px solid var(--arte-cyan); background: #05070a; }
+
+        .tab-close {
+            color: var(--arte-red); font-size: 0.85rem; padding: 2px; border-radius: 50%;
+            opacity: 0.6; transition: 0.2s; display: flex; align-items: center; justify-content: center;
+        }
+        .tab-close:hover { opacity: 1; background: rgba(255, 123, 114, 0.2); }
+
+        /* --- MAIN LAYOUT --- */
+        .arte-store-main {
+            min-height: 0; display: grid; grid-template-columns: 360px 1fr; gap: 18px; padding: 18px; background: #111820;
+        }
+
+        .arte-panel {
+            min-height: 0; background: #0d1117; border: 1px solid var(--arte-border);
+            border-radius: 6px; overflow: hidden; display: flex; flex-direction: column;
+        }
+        .arte-panel-head {
+            flex: 0 0 auto; padding: 12px 14px; border-bottom: 1px solid var(--arte-border);
+            color: var(--arte-magenta); font-weight: 900; text-transform: uppercase; letter-spacing: 0.7px;
+        }
+        .arte-panel-body { flex: 1; min-height: 0; overflow: auto; padding: 14px; display: flex; flex-direction: column;}
+
+        /* --- LEFT PANEL: DRAG & DROP --- */
+        .boot-box {
+            border: 1px solid var(--arte-gold); color: var(--arte-gold); background: rgba(255,215,0,0.03);
+            border-radius: 4px; padding: 12px; font-size: 0.75rem; line-height: 1.55; margin-bottom: 14px;
+        }
+        
+        .drop-zone {
+            border: 2px dashed var(--arte-border); background: rgba(255,255,255,0.02);
+            flex: 1; min-height: 150px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; color: var(--arte-muted); cursor: pointer; margin-bottom: 14px;
+            transition: border-color 0.2s, background 0.2s, color 0.2s;
+        }
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--arte-cyan); background: rgba(0,255,204,0.05); color: var(--arte-cyan); }
+        .drop-zone-icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .file-input { display: none; }
+
+        /* --- RIGHT PANEL: RUNTIME & TERMINAL --- */
+        .runtime-toolbar {
+            flex: 0 0 auto; padding: 10px; background: #05070a; border-bottom: 1px solid var(--arte-border);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .runtime-title { flex: 1; color: var(--arte-cyan); font-weight: 900; font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .btn {
+            height: 30px; border: 1px solid var(--arte-border); background: transparent; color: var(--arte-muted);
+            border-radius: 4px; cursor: pointer; padding: 0 15px; font-family: Consolas, monospace;
+            font-size: 0.72rem; font-weight: 900; text-transform: uppercase; transition: 0.2s;
+        }
+        .btn:hover { background: var(--arte-border); color: var(--arte-fg); }
+        .btn.cyan { border-color: var(--arte-cyan); color: var(--arte-cyan); }
+        .btn.cyan:hover { background: var(--arte-cyan); color: var(--arte-bg); }
+        .btn.gold { border-color: var(--arte-gold); color: var(--arte-gold); }
+        .btn.red { border-color: var(--arte-red); color: var(--arte-red); }
+        .btn.red:hover { background: var(--arte-red); color: var(--arte-bg); }
+
+        .view-container { flex: 1; position: relative; overflow: hidden; display: none; flex-direction: column; background: #05070a;}
+        .view-container.active { display: flex; }
+
+        /* IFRAME APP */
+        .app-frame { width: 100%; height: 100%; border: 0; background: #fff; }
+
+        /* EMPTY STATE */
+        .empty-runtime {
+            height: 100%; display: grid; place-items: center; color: var(--arte-muted); text-align: center;
+            background: radial-gradient(circle at center, rgba(0,255,204,0.05), transparent 60%), #05070a;
+        }
+        .empty-runtime h2 { color: var(--arte-cyan); margin: 0 0 8px; }
+
+        /* TERMINAL NODE EDITOR */
+        .terminal-editor-wrapper { display: flex; flex-direction: column; height: 100%; padding: 15px; gap: 15px; background: #0d1117;}
+        .terminal-input-group { display: flex; flex-direction: column; gap: 5px; }
+        .terminal-input-group label { font-size: 0.75rem; color: var(--arte-gold); text-transform: uppercase; font-weight: bold;}
+        
+        .term-input {
+            background: #05070a; border: 1px solid var(--arte-border); color: var(--arte-fg);
+            padding: 10px; font-family: inherit; font-size: 0.85rem; border-radius: 4px; outline: none;
+        }
+        .term-input:focus { border-color: var(--arte-cyan); }
+        
+        #term-app-code {
+            flex: 1; resize: none; color: #58a6ff; font-family: 'Courier New', Courier, monospace;
+            white-space: pre; overflow-wrap: normal; overflow-x: auto;
+        }
+
+        /* --- STATUS BAR --- */
+        .arte-store-status {
+            display: flex; justify-content: space-between; gap: 14px; padding: 7px 14px;
+            background: #05070a; border-top: 1px solid var(--arte-border); color: var(--arte-muted); font-size: 0.74rem;
+        }
+
+        @media(max-width: 900px){
+            .arte-store-main { grid-template-columns: 1fr; grid-template-rows: 360px 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="arte-store-shell">
+    
+    <!-- HEADER -->
+    <div class="arte-store-header">
+        <div class="arte-store-title" data-mi18n="header_title">
+            <strong>| System Framework |</strong> A.R.T.E. SIMPLE APP STORE
+        </div>
+        <div class="arte-store-kernel">
+            <span data-mi18n="kernel_line_1">KERNEL: V2.1-STORE</span><br>
+            <span data-mi18n="kernel_line_2">MODE: DYNAMIC TABS & TERMINAL</span>
+        </div>
+    </div>
+
+    <!-- DYNAMIC TAB BAR -->
+    <div class="arte-store-tabs" id="main-tabs">
+        <div class="arte-store-tab active" data-target="store" id="tab-store">
+            🔐 <span data-mi18n="tab_store">App Store</span>
+        </div>
+        <div class="arte-store-tab" data-target="terminal" id="tab-terminal">
+            📊 <span data-mi18n="tab_terminal">Terminal Node</span>
+        </div>
+        <!-- Injection Point for App Tabs -->
+    </div>
+
+    <!-- MAIN WORKSPACE -->
+    <div class="arte-store-main">
+        
+        <!-- LEFT PANEL: INJECTION MATRIX -->
+        <section class="arte-panel">
+            <div class="arte-panel-head" data-mi18n="panel_head">MODULE / APP INJECTION MATRIX</div>
+            <div class="arte-panel-body">
+                <div class="boot-box" data-mi18n="boot_box">
+                    <b>STRICT SIMPLE SEQUENCE:</b><br><br>
+                    1. Eine App-Datei hochladen (Drag & Drop).<br>
+                    2. App wird im Tab-Menü installiert.<br>
+                    3. Tab anklicken zum Starten.<br><br>
+                    Unterstützt: <b>.html</b>
+                </div>
+                
+                <div class="drop-zone" id="arte-drop-zone" data-mi18n-title="drop_title">
+                    <div class="drop-zone-icon">⇧</div>
+                    <div data-mi18n="drop_text">App-Datei hierher ziehen<br>oder klicken zum Hochladen</div>
+                </div>
+                <input class="file-input" id="arte-file-input" type="file" accept=".html">
+                
+                <button class="btn red" id="btn-clear-store" style="width:100%; margin-top: auto;" data-mi18n="btn_clear_store">Store Leeren</button>
+            </div>
+        </section>
+
+        <!-- RIGHT PANEL: MULTI-VIEW ROUTER -->
+        <section class="arte-panel">
+            
+            <div class="runtime-toolbar">
+                <div class="runtime-title" id="runtime-title" data-mi18n="rt_wait">Warte auf Eingabe...</div>
+                <button class="btn cyan" id="btn-reload-app" style="display:none;" data-mi18n="btn_reload">Reload</button>
+                <button class="btn gold" id="btn-export-app" style="display:none;" data-mi18n="btn_export">Export</button>
+            </div>
+
+            <!-- VIEW 1: Empty Store Welcome -->
+            <div class="view-container active" id="view-empty">
+                <div class="empty-runtime">
+                    <div>
+                        <h2 data-mi18n="runtime_head">A.R.T.E. Local App Runtime</h2>
+                        <p data-mi18n="runtime_sub">Eine App hochladen, programmieren oder Tab wählen.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: App Iframe Runtime -->
+            <div class="view-container" id="view-runtime">
+                <!-- Iframe wird dynamisch injiziert, um den White-Screen-Bug zu verhindern -->
+            </div>
+
+            <!-- VIEW 3: Terminal Node Editor -->
+            <div class="view-container" id="view-terminal">
+                <div class="terminal-editor-wrapper">
+                    <div class="terminal-input-group">
+                        <label data-mi18n="term_name_lbl">App Name (Referenz)</label>
+                        <input type="text" id="term-app-name" class="term-input" placeholder="z.B. ARTE_Custom_App" data-mi18n-placeholder="term_name_ph">
+                    </div>
+                    <div class="terminal-input-group" style="flex: 1;">
+                        <label data-mi18n="term_code_lbl">Raw HTML Code (Injection)</label>
+                        <textarea id="term-app-code" class="term-input" placeholder="<html>...</html>" data-mi18n-placeholder="term_code_ph"></textarea>
+                    </div>
+                    <button class="btn cyan" id="btn-save-term" data-mi18n="term_save">💾 App Kompilieren & Speichern</button>
+                </div>
+            </div>
+
+        </section>
+    </div>
+
+    <!-- STATUS BAR -->
+    <div class="arte-store-status">
+        <div id="status-left" data-mi18n="status_ready">Store bereit.</div>
+        <div id="status-right" data-mi18n="status_db_init">IndexedDB: Initialisierung...</div>
+    </div>
+</div>
+
+<script>
+(function(){
+    "use strict";
+
+    const root = typeof shadowRoot !== "undefined" ? shadowRoot : document;
+
+    const DB_NAME = "ArteSimpleAppStoreV2";
+    const DB_VERSION = 1;
+    const STORE_NAME = "apps";
+
+    // ==========================================
+    // 1. STATISCHE & SICHERE i18n ÜBERSETZUNGS-ENGINE
+    // ==========================================
+    const mod_i18n = {
+        lang: localStorage.getItem("arte_lang_pref") || "de",
+        dict: {
+            de: {
+                header_title: '<strong>| System Framework |</strong> A.R.T.E. SIMPLE APP STORE',
+                kernel_line_1: "KERNEL: V2.1-STORE", kernel_line_2: "MODE: DYNAMIC TABS & TERMINAL",
+                tab_store: "App Store", tab_terminal: "Terminal Node",
+                panel_head: "MODULE / APP INJECTION MATRIX",
+                boot_box: "<b>STRICT SIMPLE SEQUENCE:</b><br><br>1. Eine App-Datei hochladen.<br>2. App wird im Tab-Menü installiert.<br>3. Tab anklicken zum Starten.<br><br>Unterstützt: <b>.html</b>",
+                drop_text: "App-Datei hierher ziehen<br>oder klicken zum Hochladen", drop_title: "Drag & Drop Zone",
+                btn_clear_store: "Store Leeren", btn_reload: "Reload", btn_export: "Export",
+                rt_wait: "Warte auf Eingabe...",
+                runtime_head: "A.R.T.E. Local App Runtime", runtime_sub: "Eine App hochladen, programmieren oder Tab wählen.",
+                term_name_lbl: "App Name (Referenz)", term_name_ph: "z.B. ARTE_Custom_App",
+                term_code_lbl: "Raw HTML Code (Injection)", term_code_ph: "Füge hier deinen vollständigen HTML Code ein...",
+                term_save: "💾 App Kompilieren & Speichern",
+                status_ready: "Store bereit.", status_db_init: "IndexedDB: Initialisierung...",
+                
+                // JS Dynamische Strings
+                j_app: "App", j_db_err: "IndexedDB Fehler", j_loaded: "Apps geladen:", j_inst: "App installiert:",
+                j_del: "App gelöscht:", j_wipe: "Store komplett geleert.", j_err_read: "Datei-Lesefehler:", j_err_json: "JSON Parser Fehler:",
+                j_conf_del: "Möchtest du diese App wirklich löschen?", j_conf_wipe: "WARNUNG: Dies löscht ALLE Apps. Fortfahren?",
+                j_term_err_name: "Fehler: Bitte einen App-Namen eingeben.", j_term_err_code: "Fehler: Kein HTML-Code erkannt. Code muss HTML Tags enthalten."
+            },
+            en: {
+                header_title: '<strong>| System Framework |</strong> A.R.T.E. SIMPLE APP STORE',
+                kernel_line_1: "KERNEL: V2.1-STORE", kernel_line_2: "MODE: DYNAMIC TABS & TERMINAL",
+                tab_store: "App Store", tab_terminal: "Terminal Node",
+                panel_head: "MODULE / APP INJECTION MATRIX",
+                boot_box: "<b>STRICT SIMPLE SEQUENCE:</b><br><br>1. Upload an app file.<br>2. App installs into tab menu.<br>3. Click tab to launch.<br><br>Supported: <b>.html</b>",
+                drop_text: "Drag & drop app file here<br>or click to upload", drop_title: "Drag & Drop Zone",
+                btn_clear_store: "Clear Store", btn_reload: "Reload", btn_export: "Export",
+                rt_wait: "Awaiting input...",
+                runtime_head: "A.R.T.E. Local App Runtime", runtime_sub: "Upload an app, write code, or select a tab.",
+                term_name_lbl: "App Name (Reference)", term_name_ph: "e.g. ARTE_Custom_App",
+                term_code_lbl: "Raw HTML Code (Injection)", term_code_ph: "Paste your full HTML code here...",
+                term_save: "💾 Compile & Save App",
+                status_ready: "Store ready.", status_db_init: "IndexedDB: Initializing...",
+                
+                // JS Dynamische Strings
+                j_app: "App", j_db_err: "IndexedDB Error", j_loaded: "Apps loaded:", j_inst: "App installed:",
+                j_del: "App deleted:", j_wipe: "Store wiped clean.", j_err_read: "File read error:", j_err_json: "JSON parser error:",
+                j_conf_del: "Do you really want to delete this app?", j_conf_wipe: "WARNING: This deletes ALL apps. Proceed?",
+                j_term_err_name: "Error: Please enter an app name.", j_term_err_code: "Error: No HTML detected. Code must contain HTML tags."
+            }
+        },
+        t: function(key){ return this.dict[this.lang][key] || key; },
+        updateUI: function(){
+            root.querySelectorAll("[data-mi18n]").forEach(el => { el.innerHTML = this.t(el.getAttribute("data-mi18n")); });
+            root.querySelectorAll("[data-mi18n-title]").forEach(el => { el.title = this.t(el.getAttribute("data-mi18n-title")); });
+            root.querySelectorAll("[data-mi18n-placeholder]").forEach(el => { el.placeholder = this.t(el.getAttribute("data-mi18n-placeholder")); });
+            renderTabs(); 
+        }
+    };
+
+    if(window.osBus) { window.osBus.on("lang-changed", (lang) => { mod_i18n.lang = lang; mod_i18n.updateUI(); }); }
+    
+    // ==========================================
+    // 2. CORE LOGIK & DATENBANK
+    // ==========================================
+    let db = null;
+    let apps = [];
+    let activeTabId = 'store'; 
+    let activeAppObj = null;
+
+    const tabsContainer = root.getElementById("main-tabs");
+    const dropZone = root.getElementById("arte-drop-zone");
+    const fileInput = root.getElementById("arte-file-input");
+    
+    // Views
+    const viewEmpty = root.getElementById("view-empty");
+    const viewRuntime = root.getElementById("view-runtime");
+    const viewTerminal = root.getElementById("view-terminal");
+    
+    // UI Elements
+    const runtimeTitle = root.getElementById("runtime-title");
+    const btnReload = root.getElementById("btn-reload-app");
+    const btnExport = root.getElementById("btn-export-app");
+    const statusLeft = root.getElementById("status-left");
+    const statusRight = root.getElementById("status-right");
+
+    function setStatus(leftMsg, rightMsg) {
+        if(leftMsg) statusLeft.textContent = leftMsg;
+        if(rightMsg) statusRight.textContent = rightMsg;
+    }
+
+    function initDB() {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onerror = () => { setStatus(mod_i18n.t("j_db_err"), "Error"); };
+        req.onupgradeneeded = (ev) => {
+            const database = ev.target.result;
+            if(!database.objectStoreNames.contains(STORE_NAME)) { database.createObjectStore(STORE_NAME, { keyPath: "id" }); }
+        };
+        req.onsuccess = (ev) => {
+            db = ev.target.result;
+            setStatus(mod_i18n.t("status_ready"), "IndexedDB: Active");
+            loadApps();
+        };
+    }
+
+    function tx(mode) { return db.transaction([STORE_NAME], mode).objectStore(STORE_NAME); }
+
+    function loadApps() {
+        if(!db) return;
+        const req = tx("readonly").getAll();
+        req.onsuccess = () => {
+            apps = (req.result || []).sort((a,b) => a.installedAt - b.installedAt);
+            renderTabs();
+            setStatus(mod_i18n.t("j_loaded") + " " + apps.length, `Total: ${apps.length}`);
+        };
+    }
+
+    function saveApp(appObj, autoLaunch = true) {
+        if(!db) return;
+        const req = tx("readwrite").put(appObj);
+        req.onsuccess = () => {
+            setStatus(mod_i18n.t("j_inst") + " " + appObj.name, `Total: ${apps.length + 1}`);
+            loadApps();
+            if(autoLaunch) switchView(appObj.id);
+        };
+    }
+
+    function deleteApp(id) {
+        if(!db) return;
+        if(!confirm(mod_i18n.t("j_conf_del"))) return;
+        const req = tx("readwrite").delete(id);
+        req.onsuccess = () => {
+            setStatus(mod_i18n.t("j_del") + " " + id, "");
+            if(activeTabId === id) switchView('store');
+            loadApps();
+        };
+    }
+
+    root.getElementById('btn-clear-store').onclick = () => {
+        if(!db) return;
+        if(!confirm(mod_i18n.t("j_conf_wipe"))) return;
+        const req = tx("readwrite").clear();
+        req.onsuccess = () => {
+            apps = [];
+            switchView('store');
+            renderTabs();
+            setStatus(mod_i18n.t("j_wipe"), "Total: 0");
+        };
+    };
+
+    // ==========================================
+    // 3. TAB & VIEW ROUTING SYSTEM (THE FIX)
+    // ==========================================
+    function renderTabs() {
+        const dynamicTabs = tabsContainer.querySelectorAll('.dynamic-app-tab');
+        dynamicTabs.forEach(t => t.remove());
+
+        apps.forEach((app, index) => {
+            const appNum = index + 1;
+            const tab = document.createElement('div');
+            tab.className = `arte-store-tab dynamic-app-tab ${activeTabId === app.id ? 'active' : ''}`;
+            tab.dataset.target = app.id;
+            
+            tab.innerHTML = `<span>${mod_i18n.t('j_app')} ${appNum}</span> <span class="tab-close" title="Delete">✖</span>`;
+            
+            tab.onclick = (e) => {
+                if(e.target.classList.contains('tab-close')) {
+                    e.stopPropagation(); deleteApp(app.id);
+                } else {
+                    switchView(app.id);
+                }
+            };
+            tabsContainer.appendChild(tab);
+        });
+
+        root.getElementById('tab-store').classList.toggle('active', activeTabId === 'store');
+        root.getElementById('tab-terminal').classList.toggle('active', activeTabId === 'terminal');
+    }
+
+    root.getElementById('tab-store').onclick = () => switchView('store');
+    root.getElementById('tab-terminal').onclick = () => switchView('terminal');
+
+    function switchView(targetId) {
+        activeTabId = targetId;
+        renderTabs(); 
+
+        viewEmpty.classList.remove('active');
+        viewRuntime.classList.remove('active');
+        viewTerminal.classList.remove('active');
+        
+        btnReload.style.display = 'none';
+        btnExport.style.display = 'none';
+        activeAppObj = null;
+
+        if (targetId === 'store') {
+            viewEmpty.classList.add('active');
+            runtimeTitle.textContent = "A.R.T.E. MATRIX";
+        } else if (targetId === 'terminal') {
+            viewTerminal.classList.add('active');
+            runtimeTitle.textContent = "TERMINAL NODE - BUILDER";
+        } else {
+            activeAppObj = apps.find(a => a.id === targetId);
+            if (activeAppObj) {
+                viewRuntime.classList.add('active');
+                runtimeTitle.textContent = `${activeAppObj.icon || "▣"} ${activeAppObj.name}`;
+                btnReload.style.display = 'block';
+                btnExport.style.display = 'block';
+                
+                // THE CORE FIX: DOM-Wipe & Re-Inject!
+                // Löscht das alte, zerschossene I-Frame restlos und baut ein frisches auf,
+                // damit der Browser es neu rendert und die Sandbox zurücksetzt.
+                viewRuntime.innerHTML = ''; 
+                const newIframe = document.createElement('iframe');
+                newIframe.className = 'app-frame';
+                newIframe.id = 'app-iframe';
+                newIframe.setAttribute('sandbox', 'allow-scripts allow-forms allow-modals allow-downloads allow-popups');
+                newIframe.srcdoc = activeAppObj.html;
+                viewRuntime.appendChild(newIframe);
+
+            } else {
+                switchView('store'); 
+            }
+        }
+    }
+
+    // ==========================================
+    // 4. TERMINAL NODE (App Creator & Auto-i18n)
+    // ==========================================
+    root.getElementById('btn-save-term').onclick = () => {
+        const nameInput = root.getElementById('term-app-name').value.trim();
+        let codeInput = root.getElementById('term-app-code').value.trim();
+
+        if (!nameInput) { alert(mod_i18n.t("j_term_err_name")); return; }
+        if (!codeInput.toLowerCase().includes('<html') && !codeInput.toLowerCase().includes('<div')) {
+            alert(mod_i18n.t("j_term_err_code")); return;
+        }
+
+        if (!codeInput.includes('osBus.on') && !codeInput.includes('lang-changed')) {
+            const i18nSnippet = `
+<script>
+// [AUTO-INJECTED] A.R.T.E. OS Language Bridge
+if(window.osBus && typeof window.osBus.on === "function") {
+    window.osBus.on("lang-changed", function(lang) {
+        document.documentElement.lang = lang;
+    });
+}
+<\/script>`;
+            
+            if(codeInput.includes('</body>')) {
+                codeInput = codeInput.replace('</body>', i18nSnippet + '\n</body>');
+            } else {
+                codeInput += i18nSnippet;
+            }
+        }
+
+        const appObj = {
+            id: idFromName(nameInput),
+            name: nameInput,
+            icon: "⚡", 
+            version: "1.0",
+            type: "html",
+            fileName: nameInput.replace(/[^a-z0-9]/gi, '_') + "_Term.html",
+            html: codeInput,
+            raw: codeInput,
+            installedAt: Date.now()
+        };
+
+        root.getElementById('term-app-name').value = '';
+        root.getElementById('term-app-code').value = '';
+
+        saveApp(appObj, true); 
+    };
+
+    // ==========================================
+    // 5. DRAG & DROP & FILE HANDLING
+    // ==========================================
+    function idFromName(name){
+        return "app_" + String(name).toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 40) + "_" + Math.floor(Math.random()*1000);
+    }
+
+    function buildHtmlFromPackage(pkg){
+        const name = pkg.name || "A.R.T.E. App";
+        return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(name)}</title><style>${pkg.css||""}</style></head><body>${pkg.html||""}<script>${String(pkg.js||"").replace(/<\/script/gi, "<\\/script")}<\/script></body></html>`;
+    }
+
+    function escapeHtml(value){
+        return String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function normalizeAppFromFile(fileName, text){
+        const lower = fileName.toLowerCase();
+        if(lower.endsWith(".json") || lower.endsWith(".arteapp")){
+            try {
+                const pkg = JSON.parse(text);
+                return {
+                    id: idFromName(pkg.name || fileName),
+                    name: pkg.name || fileName.replace(/\.(json|arteapp)$/i, ""),
+                    icon: pkg.icon || "📦",
+                    type: "arteapp",
+                    fileName: fileName,
+                    html: buildHtmlFromPackage(pkg),
+                    raw: text,
+                    installedAt: Date.now()
+                };
+            } catch(e) { throw new Error(mod_i18n.t("j_err_json") + " " + e.message); }
+        }
+        return {
+            id: idFromName(fileName),
+            name: fileName.replace(/\.(html|htm)$/i, ""),
+            icon: "📄",
+            type: "html",
+            fileName: fileName,
+            html: text,
+            raw: text,
+            installedAt: Date.now()
+        };
+    }
+
+    function handleFile(file) {
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const text = String(reader.result || "");
+                const app = normalizeAppFromFile(file.name, text);
+                saveApp(app, true);
+            } catch(e) { alert(e.message); }
+        };
+        reader.onerror = () => { alert(mod_i18n.t("j_err_read") + " " + file.name); };
+        reader.readAsText(file);
+    }
+
+    dropZone.onclick = () => fileInput.click();
+    fileInput.onchange = () => { handleFile(fileInput.files[0]); fileInput.value = ""; };
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        dropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(evt => {
+        dropZone.addEventListener(evt, () => dropZone.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(evt => {
+        dropZone.addEventListener(evt, () => dropZone.classList.remove('dragover'), false);
+    });
+
+    dropZone.addEventListener('drop', e => {
+        if(e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    // ==========================================
+    // 6. EXPORT & RELOAD
+    // ==========================================
+    btnReload.onclick = () => {
+        // Da switchView nun das I-Frame zerstört und neu baut, 
+        // ist dieser Aufruf ein absolut sauberer Hard-Reset!
+        if(activeAppObj) switchView(activeAppObj.id);
+    };
+
+    btnExport.onclick = () => {
+        if(!activeAppObj) return;
+        const blob = new Blob([activeAppObj.raw || activeAppObj.html], { type: "text/plain" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = activeAppObj.fileName || (activeAppObj.name + ".html");
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    };
+
+    // --- Boot ---
+    setTimeout(() => {
+        mod_i18n.updateUI();
+        initDB();
+        switchView('store'); 
+    }, 100);
+
+})();
+</script>
+</body>
+</html>
